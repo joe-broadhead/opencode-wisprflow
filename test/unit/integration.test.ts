@@ -37,9 +37,19 @@ function fake(initial: { server?: string; integrationID?: string } = {}) {
         transforms.push(callback)
         return { dispose: async () => void transforms.splice(transforms.indexOf(callback), 1) }
       },
-      get: async () => ({ data: { id: state.integrationID, name: name() } }),
+      // The host projects each credential with the status the plugin set on it; `active` returns the credential alone.
+      get: async () => ({
+        data: {
+          id: state.integrationID,
+          name: name(),
+          connections: state.connection
+            ? [{ type: "credential", id: state.connection.id, label: state.connection.label, method: state.connection.method, ...(state.connection.status ? { status: state.connection.status } : {}) }]
+            : [],
+        },
+      }),
       connection: {
-        active: async () => state.connection,
+        // As the host does: the credential, without the status the plugin set on it.
+        active: async () => (state.connection ? { type: state.connection.type, id: state.connection.id, label: state.connection.label, method: state.connection.method } : undefined),
         status: async (input: { status: Connection["status"] }) => {
           reported.push(input.status)
           if (state.connection) state.connection = { ...state.connection, ...(input.status ? { status: input.status } : { status: undefined }) }

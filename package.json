@@ -1,0 +1,179 @@
+{
+  "name": "@joe-broadhead/opencode-wisprflow",
+  "version": "0.0.0",
+  "description": "Unofficial OpenCode plugin for Wispr Flow: search and read your Notetaker meetings, transcripts, Scratchpad notes and calendar through Wispr Flow's official MCP server",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "wisprflow"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joe-broadhead/opencode-wisprflow.git"
+  },
+  "homepage": "https://github.com/joe-broadhead/opencode-wisprflow#readme",
+  "bugs": {
+    "url": "https://github.com/joe-broadhead/opencode-wisprflow/issues"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./tui": "./dist/tui.js"
+  },
+  "files": [
+    "dist",
+    "assets/icon.svg",
+    "skills",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "opencode": {
+    "host": ">=2.2.3 <2.3.0"
+  },
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "typecheck": "node scripts/check.mjs typecheck",
+    "build": "node scripts/check.mjs build",
+    "test": "node scripts/check.mjs unit",
+    "test:host": "node scripts/check.mjs host",
+    "test:pack": "node scripts/check.mjs pack",
+    "lint": "node scripts/check.mjs forbidden",
+    "drift": "node scripts/check-wisprflow-tools.mjs"
+  },
+  "devDependencies": {
+    "@opencode/client": "2.2.3",
+    "@opencode/plugin": "2.2.3",
+    "@opencode/sdk": "2.2.3",
+    "@opentui/core": "0.8.0",
+    "@opentui/solid": "0.8.0",
+    "@types/bun": "1.4.4",
+    "@types/node": "24.19.2",
+    "esbuild": "0.28.2",
+    "solid-js": "1.9.17",
+    "typescript": "5.9.3"
+  },
+  "jelly": {
+    "title": "Wispr Flow",
+    "summary": "Your Wispr Flow meetings, notes and calendar.",
+    "icon": "assets/icon.svg",
+    "tools": [
+      {
+        "name": "wisprflow.get_calendar_event",
+        "permission": "wisprflow_get_calendar_event",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.get_meeting",
+        "permission": "wisprflow_get_meeting",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.get_meeting_by_calendar_id",
+        "permission": "wisprflow_get_meeting_by_calendar_id",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.get_meeting_participants_enriched",
+        "permission": "wisprflow_get_meeting_participants_enriched",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.get_scratchpad_note",
+        "permission": "wisprflow_get_scratchpad_note",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.get_upcoming_meeting",
+        "permission": "wisprflow_get_upcoming_meeting",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.list_folder_meetings",
+        "permission": "wisprflow_list_folder_meetings",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.list_folders",
+        "permission": "wisprflow_list_folders",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.list_meeting_series",
+        "permission": "wisprflow_list_meeting_series",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.list_upcoming_meetings",
+        "permission": "wisprflow_list_upcoming_meetings",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.resolve_calendar_link",
+        "permission": "wisprflow_resolve_calendar_link",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.resolve_share_link",
+        "permission": "wisprflow_resolve_share_link",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.search_calendar_events",
+        "permission": "wisprflow_search_calendar_events",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.search_meetings",
+        "permission": "wisprflow_search_meetings",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.search_scratchpad_notes",
+        "permission": "wisprflow_search_scratchpad_notes",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "wisprflow.get_participant_contacts",
+        "permission": "wisprflow_get_participant_contacts",
+        "effect": "ask",
+        "readOnly": true
+      }
+    ],
+    "skills": [
+      "wisprflow",
+      "wisprflow-meeting-brief"
+    ],
+    "rpc": [],
+    "views": [],
+    "signIns": [
+      {
+        "id": "wisprflow",
+        "label": "Wispr Flow",
+        "server": "wisprflow"
+      }
+    ],
+    "contributes": {
+      "homeFeeds": [],
+      "homeWidgets": [],
+      "workKinds": [],
+      "settings": []
+    }
+  }
+}

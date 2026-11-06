@@ -41,8 +41,12 @@ export function watchIntegration(ctx: IntegrationContext, owned: () => boolean) 
     }
     const connection = await ctx.integration.connection.active(id)
     if (connection?.type !== "credential") return
-    const reported = connection.status?.message === SIGN_IN_AGAIN
-    if (server.status.status === "needs_auth" && !connection.status) {
+    // `active` returns the credential alone; the status the plugin sets is projected by `get`. Read it there, so the
+    // mark it wrote is the one it clears, and another plugin's or the host's message is left alone.
+    const shown = (await ctx.integration.get({ integrationID: id })).data.connections?.find((item) => item.type === "credential" && item.id === connection.id)
+    const status = shown?.type === "credential" ? shown.status : undefined
+    const reported = status?.message === SIGN_IN_AGAIN
+    if (server.status.status === "needs_auth" && !status) {
       await ctx.integration.connection.status({ integrationID: id, connection, status: { status: "needs_auth", message: SIGN_IN_AGAIN } })
     } else if (server.status.status === "connected" && reported) {
       await ctx.integration.connection.status({ integrationID: id, connection, status: undefined })

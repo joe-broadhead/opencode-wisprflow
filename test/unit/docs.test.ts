@@ -99,8 +99,10 @@ describe("docs", () => {
     for (const [name, tool] of Object.entries(LIVE)) if (tool.preread) expect(block?.[2]).toContain(`wisprflow_${name}`)
   })
 
-  test("the scripting guide lists exactly the known reads as methods", () => {
-    const list = /\(`READ_TOOLS` in `src\/wisprflow-tools\.ts`\): (.*?)\. /.exec(text("docs/scripting.md"))?.[1] ?? ""
-    expect([...list.matchAll(/`([a-z_]+)`/g)].map((match) => match[1])).toEqual([...READ_TOOLS])
+  test("the scripting guide lists every known tool as a method", () => {
+    const guide = text("docs/scripting.md")
+    for (const name of [...READ_TOOLS, ...ASK_TOOLS]) expect(guide).toContain(`\`${name}\``)
+    expect(guide).toContain("`describe`")
+    expect(guide).toContain("x-opencode-directory")
   })
 })

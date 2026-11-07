@@ -16,7 +16,7 @@ import { arch, platform } from "node:os"
 import { basename, join, relative, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { ENDPOINT, SUPPORTED_HOST, TESTED_HOSTS } from "../../src/constants.js"
-import { TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { defaultRules, type Rule } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
@@ -318,19 +318,26 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     await fake?.close()
   }, 60_000)
 
-  test("describes exactly the known reads, each available with its live schema", async () => {
+  test("describes every known tool, each a read and available with its live schema", async () => {
     const { value } = await script("describe", {})
     expect(value.id).toBe(TOOLS_RPC_ID)
-    expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...READ_TOOLS])
+    expect(value.methods.map((method: { name: string }) => method.name)).toEqual(METHODS.map((method) => method.name))
     for (const method of value.methods) {
-      expect({ name: method.name, kind: method.kind, action: method.action, available: method.available }).toEqual({
+      expect({ name: method.name, kind: method.kind, class: method.class, action: method.action, available: method.available }).toEqual({
         name: method.name,
         kind: "mcp",
+        class: "read",
         action: `wisprflow_${method.name}`,
         available: true,
       })
       expect(method.input).toEqual({ type: "object", properties: { query: { type: "string" } } })
     }
+  })
+
+  test("describe with a session reports each method's permission: allow, or ask for the contacts tool", async () => {
+    const { value } = await script("describe", { sessionID: sessions.build })
+    const expected = Object.fromEntries(METHODS.map((method) => [method.name, ASK_TOOLS.includes(method.name) ? "ask" : "allow"]))
+    expect(Object.fromEntries(value.methods.map((method: { name: string; permission: string }) => [method.name, method.permission]))).toEqual(expected)
   })
 
   test("runs a known read as the session's agent, with no model turn", async () => {
@@ -347,13 +354,25 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     expect(await call("build", READ_B, { query: "text" })).toEqual({ value: { output: `text from ${READ_B}`, text: `text from ${READ_B}` } })
   })
 
-  test("never makes a read that asks, a known write or an unknown tool a method, though OpenCode lists them", async () => {
+  test("a read that asks is a method, refused before dispatch; an unknown tool has no method", async () => {
     const from = fake.calls.length
-    for (const name of [...ASK_TOOLS, ...WRITE_TOOLS, NEW_TOOL.name]) {
+    for (const name of ASK_TOOLS) {
       const result = await call("build", name, { query: "q" })
-      expect({ name, type: result.type }).toEqual({ name, type: "rpc.method_not_found" })
+      expect({ name, code: result.code }).toEqual({ name, code: "PERMISSION_DENIED" })
+      expect(result.message).toMatch(/would ask/)
     }
+    for (const name of WRITE_TOOLS) expect(await call("build", name, { query: "q" })).toMatchObject({ type: "rpc.method_not_found" })
+    expect(await call("build", NEW_TOOL.name, { query: "q" })).toMatchObject({ type: "rpc.method_not_found" })
     expect(toolCalls(from)).toEqual([])
+  })
+
+  test("a call with no location reaches another location and fails rpc.unavailable; with the project it runs", async () => {
+    const path = `/api/rpc/${TOOLS_RPC_ID}/describe`
+    const elsewhere = await host.request("POST", path, { input: {} }, join(host.directory, ".."))
+    expect(elsewhere.status).toBe(400)
+    expect(elsewhere.text).toContain("rpc.unavailable")
+    const here = await host.request("POST", path, { input: {} })
+    expect(here.status).toBe(200)
   })
 
   test("refuses a session whose agent denies Wispr Flow, before Wispr Flow is called", async () => {
@@ -367,7 +386,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     const started = Date.now()
     const result = await call("careful", READ_A, { query: "q" })
     expect(result).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
-    expect(result.message).toMatch(/cannot answer an approval prompt/)
+    expect(result.message).toMatch(/would ask for this session's agent, and a script cannot answer/)
     // Far below any approval timeout, with room for a loaded runner; the empty request list below is the proof.
     expect(Date.now() - started).toBeLessThan(15_000)
     const { data: pending } = await host.api<{ data: unknown[] }>("GET", "/api/permission/request")

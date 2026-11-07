@@ -24,7 +24,7 @@ function codeExamples(text: string) {
 /** `opencode api post /api/rpc/wisprflow.meetings.tools/<tool> -d '{"input":{"sessionID":…,"input":{…}}}'`. */
 function scriptExamples(text: string) {
   const flat = text.replace(/\s+/g, "")
-  return [...flat.matchAll(/\/api\/rpc\/wisprflow\.meetings\.tools\/([a-z_]+)\\?-d'\{"input":\{"sessionID":"[^"]*","input":(\{.*?\})\}\}'/g)].map((match) => ({
+  return [...flat.matchAll(/\/api\/rpc\/wisprflow\.meetings\.tools\/([a-z_]+)(?:\\?-H"[^"]*")?\\?-d'\{"input":\{"sessionID":"[^"]*","input":(\{.*?\})\}\}'/g)].map((match) => ({
     tool: match[1]!,
     keys: keysOf(match[2]!),
   }))

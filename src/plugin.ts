@@ -1,7 +1,7 @@
 import { Plugin, type Mcp } from "@opencode/plugin"
 import { errorText, NAMESPACE_DESCRIPTION, PLUGIN_ID, SERVER_NAME } from "./constants.js"
 import { checkHost } from "./host-version.js"
-import { registerToolsRpc } from "./host/tools-rpc.js"
+import { METHODS, registerToolsRpc } from "./host/tools-rpc.js"
 import { watchIntegration } from "./integration.js"
 import { parseOptions } from "./options.js"
 import { reasonOf } from "./redact.js"
@@ -112,7 +112,7 @@ export function createWisprflowPlugin(seam: WisprflowSeam) {
       await registerStatusRpc(ctx.rpc, read)
       // Scripts call the known reads with no model, as a session and its agent.
       // Only a conflict is someone else's server; a server that isn't registered is NOT_REGISTERED, not a conflict.
-      const stopTools = await registerToolsRpc(ctx, { mcp: { server: SERVER_NAME, managed: () => source?.type !== "conflict" } })
+      const stopTools = await registerToolsRpc(ctx, { methods: METHODS, mcp: { server: SERVER_NAME, managed: () => source?.type !== "conflict" } })
       const stopWatch = watchIntegration(ctx, owned)
       return async () => {
         await stopWatch()

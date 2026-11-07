@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- tools RPC v2.1: every known tool is scriptable under a prior explicit allow. `wisprflow.meetings.tools` now has one
+  method per known tool, by exact name and with its class (all `read`), including `get_participant_contacts`, which
+  asks by default and is refused to a script until an allow rule exists. The rule is resolved before dispatch: only an
+  `allow` runs, and an `ask` is refused with no prompt and no tool call. `describe` reports each method's class, a
+  session's permission and any live tool the table does not classify. A saved "Always allow" approval no longer
+  authorizes an ad-hoc script. `opencode api` callers must send `-H "x-opencode-directory:$PWD"`.
+
 ## [0.0.2] - 2026-11-06
 
 ### Changed

@@ -86,10 +86,11 @@ query.
 
 ## Tools RPC
 
-`wisprflow.meetings.tools` lets a script call the known reads with no model; [Scripting](scripting.md) is the user's
-view. Its methods are `describe` and one per name in `READ_TOOLS`, named after the upstream tool. It is an allowlist:
-a tool that Wispr Flow adds later, which asks on the model path, is never a method. `describe` reports each method as
-available or not from what OpenCode lists now.
+`wisprflow.meetings.tools` lets a script call every known tool with no model; [Scripting](scripting.md) is the user's
+view. Its methods are `describe` and one per name in `READ_TOOLS`, `ASK_TOOLS` and `WRITE_TOOLS`, named after the
+upstream tool and carrying a tools RPC class (every Wispr Flow tool is `read`). It is an allowlist: a tool that Wispr
+Flow adds later is not a method until it is classified, and `describe` lists it as unclassified. `describe` reports
+each method as available or not from what OpenCode lists now.
 
 A call is `{ sessionID, input }`. The module:
 

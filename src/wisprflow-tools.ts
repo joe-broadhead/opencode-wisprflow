@@ -26,9 +26,10 @@ export const READ_TOOLS: readonly string[] = [
 ]
 
 /**
- * Known tools that read but ask before they run, and are never tools RPC methods, because a script can't answer the
- * prompt. `get_participant_contacts` returns other people's job titles, companies and LinkedIn profiles; Wispr Flow
- * lists it only for accounts with Wispr Contacts (get_meeting_participants_enriched's description names it).
+ * Known tools that read but ask before they run. They are tools RPC methods like the reads, and a script is refused
+ * them until an allow rule exists, because no one can answer the prompt. `get_participant_contacts` returns other
+ * people's job titles, companies and LinkedIn profiles; Wispr Flow lists it only for accounts with Wispr Contacts
+ * (get_meeting_participants_enriched's description names it).
  */
 export const ASK_TOOLS: readonly string[] = ["get_participant_contacts"]
 

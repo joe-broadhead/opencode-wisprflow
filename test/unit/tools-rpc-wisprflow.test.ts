@@ -2,7 +2,7 @@
 // tools-rpc.test.ts.
 import { describe, expect, test } from "bun:test"
 import { PLUGIN_ID as WISPRFLOW_PLUGIN_ID, SERVER_NAME } from "../../src/constants.js"
-import { KNOWN_READS, NEXT_STEPS, PLUGIN_ID, shapeResult, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { METHODS, NEXT_STEPS, PLUGIN_ID, shapeInput, shapeResult, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { defaultRules } from "../../src/permissions.js"
 import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 
@@ -12,22 +12,21 @@ describe("Wispr Flow's tools RPC", () => {
     expect(TOOLS_RPC_ID).toBe("wisprflow.meetings.tools")
   })
 
-  test("its methods are exactly the known reads, the tools the default rules allow", () => {
-    expect([...KNOWN_READS]).toEqual([...READ_TOOLS])
+  test("every known tool is a method, by exact name, and all of them only read", () => {
+    expect(METHODS.map((method) => method.name)).toEqual([...READ_TOOLS, ...ASK_TOOLS, ...WRITE_TOOLS])
+    for (const method of METHODS) expect(method).toMatchObject({ kind: "mcp", class: "read" })
     const allowed = defaultRules().filter((rule) => rule.effect === "allow").map((rule) => rule.action)
-    expect(KNOWN_READS.map((name) => `${SERVER_NAME}_${name}`)).toEqual(allowed)
+    expect(READ_TOOLS.map((name) => `${SERVER_NAME}_${name}`)).toEqual(allowed)
+    // A read that asks is a method too, and its rule resolves to ask: a script is refused it until an allow exists.
+    expect(defaultRules()).toContainEqual({ action: `wisprflow_${ASK_TOOLS[0]}`, resource: "*", effect: "ask" })
+    for (const name of ["shiny_new_tool", "describe", "*"]) expect(METHODS.map((method) => method.name)).not.toContain(name)
   })
 
-  test("no known write and no unknown tool is a method", () => {
-    expect(KNOWN_READS.filter((name) => WRITE_TOOLS.includes(name))).toEqual([])
-    // A read that asks is never a method: no one can answer its prompt in a script.
-    expect(KNOWN_READS.filter((name) => ASK_TOOLS.includes(name))).toEqual([])
-    for (const name of ["shiny_new_tool", "describe", "*"]) expect(KNOWN_READS).not.toContain(name)
-  })
-
-  test("returns Wispr Flow's results unchanged, UTC times included", () => {
+  test("returns Wispr Flow's results unchanged, UTC times included, and leaves its arguments alone", () => {
     const result = { output: { start: "2026-01-02T03:04:05Z" }, text: "{}" }
-    expect(shapeResult("search_meetings", result)).toBe(result)
+    const call = { sessionID: "s", agent: "a", action: "wisprflow_search_meetings" }
+    expect(shapeResult("search_meetings", result, call)).toBe(result)
+    expect(shapeInput("search_meetings", { query: "q" }, call)).toEqual({ query: "q" })
   })
 
   test("names Wispr Flow's own commands in its next steps, and has no per-account servers", () => {

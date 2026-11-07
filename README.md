@@ -79,13 +79,19 @@ Two skills teach the model to use Wispr Flow well:
 
 ### Scripts
 
-A script or a cron job can call Wispr Flow's read tools with no model, through `opencode api`. It runs as a session
-and its agent, under that agent's permission rules and the session's own:
+A script or a cron job can call every tool this plugin knows with no model, through `opencode api`. It runs as a
+session and its agent, under that agent's permission rules and the session's own. The rule is resolved first, so only
+a prior explicit `allow` runs: `get_participant_contacts` asks by default and is refused, and a saved "Always allow"
+does not authorize an ad-hoc script:
 
 ```sh
 opencode api post /api/rpc/wisprflow.meetings.tools/search_meetings \
+  -H "x-opencode-directory:$PWD" \
   -d '{"input":{"sessionID":"ses_…","input":{"query":"pricing","since":"2026-03-01T00:00:00Z"}}}'
 ```
+
+Without `x-opencode-directory:$PWD` the call reaches the service's default location and fails `rpc.unavailable` when
+the plugin is not loaded there.
 
 See [Scripting](https://github.com/joe-broadhead/opencode-wisprflow/blob/HEAD/docs/scripting.md).
 

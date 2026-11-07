@@ -7,7 +7,7 @@ Unofficial; not affiliated with Wispr Flow.
 
 ## Requirements
 
-- OpenCode `>=2.2.3 <2.3.0`, tested on 2.2.3, 2.2.4 and 2.2.5. Outside that range the plugin does not start, unless
+- OpenCode `>=2.2.3 <2.3.0`, tested on 2.2.3, 2.2.4, 2.2.5 and 2.2.6. Outside that range the plugin does not start, unless
   you set `allowUntestedHost`.
 - macOS or Linux.
 - A Wispr Flow account with Notetaker and MCP access; the free plan includes it. The Wispr Flow app on Mac or Windows
@@ -171,7 +171,7 @@ Run `/wisprflow-status` first. Its last line is the next step.
 | Tools: unknown | Your account lists tools the plugin hasn't classified, such as ones Wispr Flow added or lists only with a feature turned on. They ask before they run. |
 | Skills: `wisprflow` is replaced by a path | A skill of yours with the id `wisprflow` or `wisprflow-meeting-brief`, for example in `~/.config/opencode/skills/` or a project's `.opencode/skills/`, loads instead of the plugin's own. Rename or move that file, as the next step says. |
 | Agents without default rules | Put the default rules shown by `/wisprflow-status` first in each listed agent's own permissions, in `opencode.json` or the agent's Markdown file, followed by your top-level rules for Wispr Flow tools. |
-| OpenCode: untested | OpenCode is not 2.2.3, 2.2.4 or 2.2.5. Inside `>=2.2.3 <2.3.0` the plugin runs normally; outside it, it runs only because `allowUntestedHost` is set. If Wispr Flow misbehaves, use a tested release. |
+| OpenCode: untested | OpenCode is not 2.2.3, 2.2.4, 2.2.5 or 2.2.6. Inside `>=2.2.3 <2.3.0` the plugin runs normally; outside it, it runs only because `allowUntestedHost` is set. If Wispr Flow misbehaves, use a tested release. |
 | "Cloud Sync must be enabled to use this feature." | Turn on Dictation cloud storage in Wispr Flow's Settings → Data & Privacy, or ask your admin. Meetings recorded while it was off never appear, even after you turn it on. |
 | "This feature is not available for HIPAA-covered accounts." | Wispr Flow's MCP is not available on this account. |
 | "MCP access has been disabled by your organization's administrator." or "Scratchpad access has been disabled…" | Ask your organisation's Wispr Flow admin. |

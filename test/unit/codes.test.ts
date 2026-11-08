@@ -18,9 +18,12 @@ function walk(dir: string, out: string[] = []): string[] {
   return out
 }
 
-/** Every SCREAMING_SNAKE code literal in src, wherever it is raised or described. */
+/** Every SCREAMING_SNAKE code literal in src, wherever it is raised or described, or one that starts a message as `CODE: what happened`. */
 const raised = new Set(
-  walk("src").flatMap((file) => [...read(file).matchAll(/"([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*)"/g)].map((match) => match[1]!)),
+  walk("src").flatMap((file) => [
+    ...[...read(file).matchAll(/"([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*)"/g)].map((match) => match[1]!),
+    ...[...read(file).matchAll(/["'`]([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+): /g)].map((match) => match[1]!),
+  ]),
 )
 
 /** The codes in the first cell of a Markdown table row that starts with one, or a row that names several. */

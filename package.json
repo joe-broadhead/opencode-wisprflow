@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-wisprflow",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Unofficial OpenCode plugin for Wispr Flow: search and read your Notetaker meetings, transcripts, Scratchpad notes and calendar through Wispr Flow's official MCP server",
   "keywords": [
     "opencode",

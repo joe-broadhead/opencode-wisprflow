@@ -40,7 +40,7 @@ the checks and the release steps.
 - **`src/wisprflow-tools.ts` is the one place that classifies Wispr Flow's tools,** and it and `src/constants.ts` have
   no runtime imports: the drift script and `scripts/check.mjs` load them with Node's type stripping. The default
   rules, the tools RPC's methods, status and the tests derive from it. `READ_TOOLS` run without a prompt and are the
-  only tools RPC methods; `ASK_TOOLS` read but ask, because they return other people's personal data; `WRITE_TOOLS`
+  only tools RPC methods besides the plugin's own `PLUGIN_READS` (`events_list`); `ASK_TOOLS` read but ask, because they return other people's personal data; `WRITE_TOOLS`
   ask. Together they are exactly the tools in `test/unit/wisprflow-catalog.ts`.
 - **The `jelly` section** of `package.json` declares every known tool, the skills, the sign-in, a one-line `summary`
   and the `icon`. Jelly's declaration schema drops a top-level key it does not know, and its nested entries accept only
@@ -49,10 +49,14 @@ the checks and the release steps.
 - **The icon** `assets/icon.svg` is a neutral notepad-and-clock glyph: no Wispr Flow logo, shape or brand colour, and
   no microphone or sound wave, because the plugin is unofficial and reads meeting notes, not dictation. It uses only
   the drawing elements Jelly's icon cleaner keeps, and no `<title>`, which the cleaner refuses.
+- **Events list.** `src/events.ts` is Wispr Flow's side of Memory's sources funnel: `wisprflow_events_list` and the
+  owned method `events_list`, reading through `search_meetings` only. `src/host/events-list.ts` is the shared
+  `events_list` contract every source plugin carries unchanged (`scripts/check-copies.mjs` pins its hash): change it in
+  every source plugin at once. Its tests run the contract's conformance check on a synthetic `search_meetings`.
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
 - **The tools RPC.** `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block
   between the `PLUGIN-SPECIFIC` markers here; change the rest in the shared copy first. Its methods are `READ_TOOLS`
-  and nothing else: never a write or an unknown tool. Keep the RPC id `wisprflow.meetings.tools` and its method names
+  and the owned `events_list`, nothing else: never a write or an unknown tool. Keep the RPC id `wisprflow.meetings.tools` and its method names
   stable: scripts call them by name.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
   `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`.

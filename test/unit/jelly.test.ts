@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { DISPLAY_NAME, SERVER_NAME } from "../../src/constants.js"
 import { defaultRules, evaluate, type Rule } from "../../src/permissions.js"
-import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { ASK_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 import { type Declaration, type DeclaredTool, declarationProblems, docProblems, readPackage } from "../support/jelly-kit.js"
 
 /**
@@ -27,7 +27,9 @@ describe("the jelly declaration", () => {
     // A read that asks is declared as an ask, so Jelly, whose agents never get the plugin's rules, asks too.
     for (const tool of ASK_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "ask", readOnly: true })
     for (const tool of WRITE_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "ask", readOnly: false })
-    expect(jelly.tools.map((tool) => tool.permission)).toEqual([...READ_TOOLS, ...ASK_TOOLS, ...WRITE_TOOLS].map((tool) => `wisprflow_${tool}`))
+    // The plugin's own read, events_list, is declared after Wispr Flow's reads.
+    for (const tool of PLUGIN_READS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
+    expect(jelly.tools.map((tool) => tool.permission)).toEqual([...READ_TOOLS, ...PLUGIN_READS, ...ASK_TOOLS, ...WRITE_TOOLS].map((tool) => `wisprflow_${tool}`))
   })
 
 

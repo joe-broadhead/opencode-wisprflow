@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { defaultRules, evaluate, hasDefaultRules, insertRules, registerDefaultRules, unguardedAgents, type Rule } from "../../src/permissions.js"
-import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { ASK_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 import { agentEditor, allow, builtInAgents, transforms, type AgentEditor, type FakeAgent } from "./fake.js"
 
 const [READ_A, READ_B] = READ_TOOLS as [string, string]
@@ -10,11 +10,11 @@ const ask: Rule = { action: "wisprflow_*", resource: "*", effect: "ask" }
 const effects = (rules: readonly Rule[]) => [`wisprflow_${READ_A}`, `wisprflow_${READ_B}`, `wisprflow_${WRITE}`, "wisprflow_shiny_new_tool"].map((action) => evaluate(rules, action))
 
 describe("defaultRules", () => {
-  test("ask for every Wispr Flow tool, then allow each known read, then ask for the reads that ask, and deny nothing", () => {
+  test("ask for every Wispr Flow tool, then allow each known read and the plugin's own, then ask for the reads that ask, and deny nothing", () => {
     const rules = defaultRules()
     expect(rules[0]).toEqual(ask)
     expect(rules.slice(1)).toEqual([
-      ...READ_TOOLS.map((tool): Rule => ({ action: `wisprflow_${tool}`, resource: "*", effect: "allow" })),
+      ...[...READ_TOOLS, ...PLUGIN_READS].map((tool): Rule => ({ action: `wisprflow_${tool}`, resource: "*", effect: "allow" })),
       ...ASK_TOOLS.map((tool): Rule => ({ action: `wisprflow_${tool}`, resource: "*", effect: "ask" })),
     ])
     expect(rules.filter((rule) => rule.effect === "deny")).toEqual([])

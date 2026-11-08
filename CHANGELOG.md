@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `wisprflow_events_list`, and the tools RPC method `events_list`: the meetings Wispr Flow captured since a cursor, as Memory's normalised events, oldest first, each with its title, start, up to 5 attendees and its `share_link`. It reads through `search_meetings` (one week at a time, every page), never contacts, never asks, and is allowed by default, so Memory's collector can run it unattended. A meeting is listed once it started 2 hours ago. The owner is OpenCode's sign-in for Wispr Flow, since Wispr Flow has no account read.
+- `src/host/events-list.ts`, the shared `events_list` source contract, carried unchanged; `scripts/check-copies.mjs` pins it like the other shared copies.
+- The errors `EVENTS_INVALID_INPUT`, `EVENTS_CURSOR_INVALID`, `EVENTS_ACCOUNT_UNKNOWN`, `EVENTS_SOURCE_UNKNOWN`, `EVENTS_OWNER_UNKNOWN`, `EVENTS_UNAVAILABLE` and `EVENTS_READ_FAILED`.
+
 ## [0.0.2] - 2026-11-06
 
 ### Changed

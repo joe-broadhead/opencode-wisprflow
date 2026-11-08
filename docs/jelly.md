@@ -16,8 +16,8 @@ each tool and each sign-in, accept only their own fields.
 
 ## Tools and permissions
 
-16 tools are declared (16 read-only): the 15 Wispr Flow lists for every account, and `get_participant_contacts`,
-which it lists only for accounts with Wispr Contacts. Jelly's agents have
+17 tools are declared (17 read-only): the 15 Wispr Flow lists for every account, `get_participant_contacts`,
+which it lists only for accounts with Wispr Contacts, and the plugin's own `events_list`. Jelly's agents have
 no base "allow everything" rule, so this plugin's own default rules, which it puts after that
 rule, never reach them. Jelly writes each declared `ask` or `deny` as that tool's default instead
 (the person's own choice replaces it), and denies a read-only helper every tool not marked
@@ -26,7 +26,8 @@ rule, never reach them. Jelly writes each declared `ask` or `deny` as that tool'
 - Ask: `wisprflow_get_participant_contacts`. It only reads, but it returns other people's job titles, companies and
   LinkedIn profiles, so it asks, in Jelly as in OpenCode.
 - Off: none.
-- Everything else runs, as the plugin's own rules let it.
+- Everything else runs, as the plugin's own rules let it. That includes `wisprflow_events_list`, the plugin's own
+  read for Memory's collector, which runs it unattended, so it never asks.
 
 A tool the upstream server adds later is not declared, so in Jelly it is not asked about by
 default. Keep `jelly.tools` in step with the known-tool list; `test/unit/jelly.test.ts` checks
@@ -52,4 +53,4 @@ Jelly folds the declared sign-ins into this plugin's one card, which shows each 
 Jelly's curated catalogue pins an exact version. Each release is published under a new version, so a review in
 Jelly can tell the two apart.
 
-The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit, and the shared part of the tools RPC (`src/host/tools-rpc.ts`), equal to the copy every plugin carries.
+The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit, the shared part of the tools RPC (`src/host/tools-rpc.ts`) and the events_list source contract (`src/host/events-list.ts`) equal to the copies every plugin carries.

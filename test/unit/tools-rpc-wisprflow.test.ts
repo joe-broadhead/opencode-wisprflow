@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test"
 import { PLUGIN_ID as WISPRFLOW_PLUGIN_ID, SERVER_NAME } from "../../src/constants.js"
 import { KNOWN_READS, NEXT_STEPS, PLUGIN_ID, shapeResult, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { defaultRules } from "../../src/permissions.js"
-import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { ASK_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 
 describe("Wispr Flow's tools RPC", () => {
   test("is wisprflow.meetings.tools, under the plugin's own id", () => {
@@ -12,10 +12,10 @@ describe("Wispr Flow's tools RPC", () => {
     expect(TOOLS_RPC_ID).toBe("wisprflow.meetings.tools")
   })
 
-  test("its methods are exactly the known reads, the tools the default rules allow", () => {
+  test("its MCP methods are exactly the known reads; with the plugin's own events_list, the tools the default rules allow", () => {
     expect([...KNOWN_READS]).toEqual([...READ_TOOLS])
     const allowed = defaultRules().filter((rule) => rule.effect === "allow").map((rule) => rule.action)
-    expect(KNOWN_READS.map((name) => `${SERVER_NAME}_${name}`)).toEqual(allowed)
+    expect([...KNOWN_READS, ...PLUGIN_READS].map((name) => `${SERVER_NAME}_${name}`)).toEqual(allowed)
   })
 
   test("no known write and no unknown tool is a method", () => {

@@ -150,6 +150,12 @@
         "readOnly": true
       },
       {
+        "name": "wisprflow.events_list",
+        "permission": "wisprflow_events_list",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
         "name": "wisprflow.get_participant_contacts",
         "permission": "wisprflow_get_participant_contacts",
         "effect": "ask",

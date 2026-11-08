@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { ASK_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 import { defaultRules } from "../../src/permissions.js"
 import { LIVE } from "./wisprflow-catalog.js"
 
@@ -22,9 +22,9 @@ describe("docs", () => {
     expect(writes.filter((count) => count !== WRITE_TOOLS.length)).toEqual([])
   })
 
-  test.each(FILES)("%s names only Wispr Flow tools the plugin knows", (file) => {
+  test.each(FILES)("%s names only Wispr Flow tools the plugin knows, and its own events_list", (file) => {
     const named = [...text(file).matchAll(/\bwisprflow_([a-z][a-z_]*)(?![\w*])/g)].map((match) => match[1]!)
-    expect(named.filter((tool) => ![...READ_TOOLS, ...ASK_TOOLS, ...WRITE_TOOLS].includes(tool))).toEqual([])
+    expect(named.filter((tool) => ![...READ_TOOLS, ...PLUGIN_READS, ...ASK_TOOLS, ...WRITE_TOOLS].includes(tool))).toEqual([])
   })
 
   // S5: version numbers live in package.json and the CHANGELOG heading only, and nothing says the package is unreleased.

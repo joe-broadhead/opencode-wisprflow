@@ -18,8 +18,8 @@ Unofficial; not affiliated with Wispr Flow.
 - Wispr Flow processes your data in the United States.
 
 What Wispr Flow's server can't read: dictation history, the dictionary, snippets, styles and usage. No tool takes
-audio, and no tool changes anything in Wispr Flow. One tool, `get_participant_contacts`, asks before it runs: see
-[Permissions](#permissions).
+audio, and no tool changes anything in Wispr Flow. `get_participant_contacts` returns other people's profile data and
+is allowed like every other tool by default: see [Permissions](#permissions).
 
 ## Install
 
@@ -219,7 +219,7 @@ Run `/wisprflow-status` first. Its last line is the next step.
 | Sign-in never starts | Your own `mcp.servers.wisprflow` URL ends with a slash. Wispr Flow's sign-in needs `https://api.wisprflow.ai/connect/mcp` exactly; status reports this as a conflict. |
 | Wispr Flow's sign-in page doesn't return you to OpenCode | See Wispr Flow's help on [connecting an MCP client](https://docs.wisprflow.ai/articles/9551372685-connect-an-mcp-client-to-wispr-flow-remote-mcp-server), then run `/connect` and choose Wispr Flow again. |
 | Tools: 0 available, while connected | Wispr Flow lists no tools for this account: an active HIPAA agreement, or an organisation policy, turns its MCP off. Check Wispr Flow's Settings → MCP, or ask your admin. |
-| Tools: unknown | Your account lists tools the plugin hasn't classified, such as ones Wispr Flow added or lists only with a feature turned on. They ask before they run. |
+| Tools: unknown | Your account lists tools the plugin hasn't classified, such as ones Wispr Flow added or lists only with a feature turned on. The default block's `wisprflow_*` rule decides them: they run at the default `access`, ask at `"ask-changes"` and are denied at `"read-only"`. |
 | Skills: `wisprflow` is replaced by a path | A skill of yours with the id `wisprflow` or `wisprflow-meeting-brief`, for example in `~/.config/opencode/skills/` or a project's `.opencode/skills/`, loads instead of the plugin's own. Rename or move that file, as the next step says. |
 | Agents without default rules | Put the default rules shown by `/wisprflow-status` first in each listed agent's own permissions, in `opencode.json` or the agent's Markdown file, followed by your top-level rules for Wispr Flow tools. |
 | OpenCode: untested | OpenCode is not 2.2.3, 2.2.4, 2.2.5 or 2.2.6. Inside `>=2.2.3 <2.3.0` the plugin runs normally; outside it, it runs only because `allowUntestedHost` is set. If Wispr Flow misbehaves, use a tested release. |

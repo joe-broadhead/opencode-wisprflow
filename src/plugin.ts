@@ -1,5 +1,6 @@
 import { Plugin, type Mcp } from "@opencode/plugin"
 import { errorText, NAMESPACE_DESCRIPTION, PLUGIN_ID, SERVER_NAME } from "./constants.js"
+import { eventsMethod, registerEvents } from "./events.js"
 import { checkHost } from "./host-version.js"
 import { registerToolsRpc } from "./host/tools-rpc.js"
 import { watchIntegration } from "./integration.js"
@@ -102,6 +103,9 @@ export function createWisprflowPlugin(seam: WisprflowSeam) {
       await ctx.tool.transform((editor) => {
         if (source?.type !== "conflict") editor.namespace({ name: SERVER_NAME, description: NAMESPACE_DESCRIPTION })
       })
+      // events_list, Memory's source of meetings, reads through the server's search_meetings; not beside someone else's.
+      const ours = () => source?.type !== "conflict"
+      await registerEvents(ctx, ours)
       await registerDefaultRules(ctx.agent, defaultRules(), report("rules"))
       const own = skills.map(({ name, path }) => ({ name, path }))
       const read = () => readStatus(ctx, { ...(source ? { source } : {}), host, skills: own, problems: [...problems.values()] })
@@ -110,9 +114,9 @@ export function createWisprflowPlugin(seam: WisprflowSeam) {
       await registerSkills(ctx.skill, skills)
       await registerStatusCommand(ctx, read)
       await registerStatusRpc(ctx.rpc, read)
-      // Scripts call the known reads with no model, as a session and its agent.
+      // Scripts call the known reads and events_list with no model, as a session and its agent.
       // Only a conflict is someone else's server; a server that isn't registered is NOT_REGISTERED, not a conflict.
-      const stopTools = await registerToolsRpc(ctx, { mcp: { server: SERVER_NAME, managed: () => source?.type !== "conflict" } })
+      const stopTools = await registerToolsRpc(ctx, { mcp: { server: SERVER_NAME, managed: ours }, owned: [eventsMethod(ctx, ours)] })
       const stopWatch = watchIntegration(ctx, owned)
       return async () => {
         await stopWatch()

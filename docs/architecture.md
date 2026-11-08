@@ -18,6 +18,8 @@ no tool of its own and has no runtime dependencies.
 | `src/permissions.ts` | The default rules, their placement, and detection of agents without them |
 | `src/status.ts` | The status model and text, `/wisprflow-status`, and the status RPC method |
 | `src/skills.ts` | Loading and registering the skills |
+| `src/events.ts` | `wisprflow_events_list` and its tools RPC method: Memory's source of meetings, through `search_meetings`, with its cursor, owner and errors |
+| `src/host/events-list.ts` | The shared `events_list` contract, carried unchanged: the event type, input, cursors, checks and conformance |
 | `src/host/tools-rpc.ts` | The tools RPC for scripts, `wisprflow.meetings.tools`; a copy of a module shared by several plugins, with Wispr Flow's part in one marked block |
 | `src/tui.ts` | The terminal UI part: the plugin `wisprflow.meetings.tui` and the `/wisprflow` dialog |
 | `src/constants.ts` | IDs, the server name and URL, the Code Mode namespace description, the supported host range, the tested releases (`TESTED_HOSTS`, the one list the checks and status use) and the error shape. No imports, so `scripts/check.mjs` can load it |
@@ -87,7 +89,9 @@ query.
 ## Tools RPC
 
 `wisprflow.meetings.tools` lets a script call the known reads with no model; [Scripting](scripting.md) is the user's
-view. Its methods are `describe` and one per name in `READ_TOOLS`, named after the upstream tool. It is an allowlist:
+view. Its methods are `describe`, one per name in `READ_TOOLS`, named after the upstream tool, and the plugin's own
+`events_list`, an owned method that runs `src/events.ts` as the session and whose `EVENTS_` errors reach the script
+through `pluginError`. It is an allowlist:
 a tool that Wispr Flow adds later, which asks on the model path, is never a method. `describe` reports each method as
 available or not from what OpenCode lists now.
 

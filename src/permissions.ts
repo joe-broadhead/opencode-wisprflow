@@ -1,7 +1,7 @@
 import type { Plugin } from "@opencode/plugin"
 import { DISPLAY_NAME, errorText, SERVER_NAME } from "./constants.js"
 import { reasonOf } from "./redact.js"
-import { ASK_TOOLS, READ_TOOLS } from "./wisprflow-tools.js"
+import { ASK_TOOLS, PLUGIN_READS, READ_TOOLS } from "./wisprflow-tools.js"
 
 export interface Rule {
   readonly action: string
@@ -15,9 +15,14 @@ const rule = (tool: string, effect: Rule["effect"]): Rule => ({ action: actionOf
 
 /**
  * Broad first, narrow last, because the last matching rule wins: every Wispr Flow tool asks, tools Wispr Flow adds
- * later included, then the known reads run without a prompt, and the known tools that ask say so explicitly.
+ * later included, then the known reads and the plugin's own read (events_list, which Memory's collector runs unattended)
+ * run without a prompt, and the known tools that ask say so explicitly.
  */
-export const defaultRules = (): Rule[] => [rule("*", "ask"), ...READ_TOOLS.map((tool) => rule(tool, "allow")), ...ASK_TOOLS.map((tool) => rule(tool, "ask"))]
+export const defaultRules = (): Rule[] => [
+  rule("*", "ask"),
+  ...[...READ_TOOLS, ...PLUGIN_READS].map((tool) => rule(tool, "allow")),
+  ...ASK_TOOLS.map((tool) => rule(tool, "ask")),
+]
 
 const same = (a: Rule | undefined, b: Rule) => a?.action === b.action && a.resource === b.resource && a.effect === b.effect
 const BASE_ALLOW: Rule = { action: "*", resource: "*", effect: "allow" }

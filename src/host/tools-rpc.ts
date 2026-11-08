@@ -29,6 +29,7 @@ import { Rpc } from "@opencode/plugin/rpc"
 
 // >>> PLUGIN-SPECIFIC >>>
 import { PLUGIN_ID as WISPRFLOW_PLUGIN_ID, SERVER_NAME } from "../constants.js"
+import { EventsFailure } from "../events.js"
 import { READ_TOOLS } from "../wisprflow-tools.js"
 
 /** The plugin's id. The RPC id is `<PLUGIN_ID>.tools`. */
@@ -37,7 +38,8 @@ export const PLUGIN_ID = WISPRFLOW_PLUGIN_ID
 /**
  * The MCP tools that become methods, by their upstream name (the tool id without the `<server>_` prefix). Only known
  * reads belong here: an allowlist, so a tool the server adds later is never a method. Wispr Flow's are its known
- * reads, the tools that the default rules allow; its known writes, such as task changes, never become methods.
+ * reads, the tools that the default rules allow; its known writes, such as task changes, never become methods. The
+ * plugin's own events_list is a method too, as an owned method that setup passes.
  */
 export const KNOWN_READS: readonly string[] = READ_TOOLS
 
@@ -62,9 +64,9 @@ export const NEXT_STEPS: NextSteps = {
   CANCELLED: "Call the method again if you still need the result.",
 }
 
-/** The plugin's own errors, thrown by plugin-owned specs, as a code, what happened and the next step. Wispr Flow has none. */
-export function pluginError(_error: unknown): Failure | undefined {
-  return undefined
+/** The plugin's own errors, thrown by plugin-owned specs, as a code, what happened and the next step: events_list's. */
+export function pluginError(error: unknown): Failure | undefined {
+  return error instanceof EventsFailure ? { code: error.code, what: error.what, next: error.next } : undefined
 }
 
 // <<< PLUGIN-SPECIFIC <<<

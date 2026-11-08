@@ -3,7 +3,7 @@ import { DISPLAY_NAME, PLUGIN_ID, SERVER_NAME, TESTED_HOSTS } from "./constants.
 import { isSupportedHost, type HostCheck } from "./host-version.js"
 import { shortReason } from "./redact.js"
 import { defaultRules, unguardedAgents, type Rule } from "./permissions.js"
-import { ASK_TOOLS, classify, WRITE_TOOLS } from "./wisprflow-tools.js"
+import { ASK_TOOLS, classify, PLUGIN_READS, WRITE_TOOLS } from "./wisprflow-tools.js"
 import { VERSION } from "./version.js"
 
 /** The shared status labels in machine form; `/wisprflow-status` shows them as `sign-in required` and so on. */
@@ -265,7 +265,8 @@ export async function readStatus(ctx: StatusContext, facts: SetupFacts) {
     ...(listed ? { skills: { own: facts.skills, listed } } : {}),
     ...(server ? { server: server.status } : {}),
     ...(connection?.type === "credential" ? { account: connection.label } : {}),
-    tools: tools.filter((tool) => tool.options?.namespace === SERVER_NAME).map((tool) => tool.name),
+    // Wispr Flow's own tools: the plugin's events_list sits in the namespace too, but it is not Wispr Flow's.
+    tools: tools.filter((tool) => tool.options?.namespace === SERVER_NAME && !PLUGIN_READS.includes(tool.name)).map((tool) => tool.name),
     agents: agents.data,
   })
 }

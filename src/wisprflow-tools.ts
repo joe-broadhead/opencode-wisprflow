@@ -26,14 +26,15 @@ export const READ_TOOLS: readonly string[] = [
 ]
 
 /**
- * Known tools that read but ask before they run. They are tools RPC methods like the reads, and a script is refused
- * them until an allow rule exists, because no one can answer the prompt. `get_participant_contacts` returns other
- * people's job titles, companies and LinkedIn profiles; Wispr Flow lists it only for accounts with Wispr Contacts
+ * Known tools that read personal data, kept in their own list so status, the docs and the tools RPC can name them. The
+ * generated block allows them at `access: "all"` like every other tool, so they are not asked about by default; a
+ * user's rule or `"ask-changes"` is what stops them. `get_participant_contacts` returns other people's job titles,
+ * companies and LinkedIn profiles; Wispr Flow lists it only for accounts with Wispr Contacts
  * (get_meeting_participants_enriched's description names it).
  */
 export const ASK_TOOLS: readonly string[] = ["get_participant_contacts"]
 
-/** Known writes: none today. They would ask before they run. A tool Wispr Flow adds later is unknown, and asks too. */
+/** Known writes: none today. A tool Wispr Flow adds later is unknown, and the default block's `wisprflow_*` rule decides it. */
 export const WRITE_TOOLS: readonly string[] = []
 
 type ToolClass = "read" | "ask" | "write" | "unknown"

@@ -40,9 +40,9 @@ export const PLUGIN_ID = WISPRFLOW_PLUGIN_ID
 
 /**
  * Every tool this plugin knows, by exact upstream name, with the class the tools RPC reports. Every Wispr Flow tool
- * only reads, so all are `read`, including `get_participant_contacts`, which asks by default and so is refused to a
- * script until an allow rule exists. An allowlist: a tool the server adds later is not a method until it is classified
- * in `src/wisprflow-tools.ts`, and `describe` lists it as unclassified.
+ * only reads, so all are `read`, `get_participant_contacts` included: the default block allows it like every other
+ * tool, so a script calls it unless the user restricts it. An allowlist: a tool the server adds later is not a method
+ * until it is classified in `src/wisprflow-tools.ts`, and `describe` lists it as unclassified.
  */
 export const METHODS: readonly MethodSpec[] = [...READ_TOOLS, ...ASK_TOOLS, ...WRITE_TOOLS].map((name): MethodSpec => ({
   kind: "mcp",

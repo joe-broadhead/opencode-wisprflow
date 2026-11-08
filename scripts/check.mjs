@@ -12,10 +12,16 @@ const env = { ...process.env, PATH: `${join(root, "node_modules", ".bin")}${deli
 const { TESTED_HOSTS } = await import(new URL("../src/constants.ts", import.meta.url).href)
 
 // The approved package shape. Change it here only together with the release policy.
-const FILES = ["dist", "assets/icon.svg", "skills", "README.md", "LICENSE", "CHANGELOG.md"]
-const EXPORTS = { ".": "index", "./tui": "tui" }
+const FILES = ["dist", "assets/icon.svg", "assets/icon-128.png", "assets/icon-256.png", "skills", "README.md", "LICENSE", "CHANGELOG.md"]
+const EXPORTS = {
+  ".": "./dist/index.js",
+  "./tui": "./dist/tui.js",
+  "./icon.svg": "./assets/icon.svg",
+  "./icon-128.png": "./assets/icon-128.png",
+  "./icon-256.png": "./assets/icon-256.png",
+}
 // dist/ holds one self-contained bundle per export, and nothing else (scripts/build.mjs).
-const DIST = Object.values(EXPORTS).map((base) => `${base}.js`).sort()
+const DIST = ["index.js", "tui.js"]
 // The tested OpenCode line. The host provides @opencode/plugin, OpenTUI and Solid, so the package declares no peers.
 const HOST_RANGE = ">=2.2.3 <2.3.0"
 const HOST_DEV_PIN = "2.2.3"
@@ -26,11 +32,13 @@ const stages = {
   typecheck: () => run("tsc", ["--noEmit", "-p", "tsconfig.json"]),
   unit: () => run("bun", ["test", "./test/unit"]),
   build: () => run("node", ["scripts/build.mjs"]),
+  icons: () => run("node", ["scripts/check-icons.mjs"]),
   host: host,
   pack: () => run("bun", ["test", "./test/pack"]),
   forbidden: () => run("node", ["scripts/check-forbidden.mjs"]),
   copies: () => run("node", ["scripts/check-copies.mjs"]),
   whitelist: whitelist,
+  actionlint: actionlint,
 }
 
 const selected = process.argv.slice(2)
@@ -87,6 +95,20 @@ function host() {
   return 0
 }
 
+/**
+ * The workflows are parsed as workflows, not as YAML: `actionlint` catches a `${{ }}` that only exists in some
+ * contexts, which makes GitHub reject the whole file and run nothing. CI runs it in its own job; here it runs when the
+ * tool is on PATH.
+ */
+function actionlint() {
+  const probe = spawnSync("actionlint", ["-version"], { encoding: "utf8" })
+  if (probe.error?.code === "ENOENT") {
+    console.log("actionlint is not on PATH, so the workflow check is skipped here; CI runs it in its own job.")
+    return 0
+  }
+  return run("actionlint", ["-color"])
+}
+
 function whitelist() {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
   // No "private" check: only the release workflow's guard checks it.
@@ -101,10 +123,9 @@ function whitelist() {
   const exportsSeen = Object.keys(pkg.exports ?? {})
   for (const key of Object.keys(EXPORTS)) if (!exportsSeen.includes(key)) problems.push(`"exports" is missing "${key}".`)
   for (const key of exportsSeen) {
-    const base = EXPORTS[key]
-    if (!base) { problems.push(`"exports" must not contain "${key}".`); continue }
+    const want = EXPORTS[key]
     // No declaration files ship: nothing consumes the plugin's types.
-    const want = `./dist/${base}.js`
+    if (!want) { problems.push(`"exports" must not contain "${key}".`); continue }
     if (pkg.exports[key] !== want) problems.push(`"exports"["${key}"] must be ${JSON.stringify(want)}.`)
   }
   for (const field of ["main", "types", "module", "bin"]) if (field in pkg) problems.push(`Remove "${field}": "exports" is the only entry map.`)

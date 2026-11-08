@@ -19,18 +19,51 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./tui": "./dist/tui.js"
+    "./tui": "./dist/tui.js",
+    "./icon.svg": "./assets/icon.svg",
+    "./icon-128.png": "./assets/icon-128.png",
+    "./icon-256.png": "./assets/icon-256.png"
   },
   "files": [
     "dist",
     "assets/icon.svg",
+    "assets/icon-128.png",
+    "assets/icon-256.png",
     "skills",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
   ],
   "opencode": {
-    "host": ">=2.2.3 <2.3.0"
+    "host": ">=2.2.3 <2.3.0",
+    "icons": [
+      {
+        "src": "assets/icon.svg",
+        "mimeType": "image/svg+xml",
+        "sizes": [
+          "any"
+        ]
+      },
+      {
+        "src": "assets/icon-128.png",
+        "mimeType": "image/png",
+        "sizes": [
+          "128x128"
+        ]
+      },
+      {
+        "src": "assets/icon-256.png",
+        "mimeType": "image/png",
+        "sizes": [
+          "256x256"
+        ]
+      }
+    ],
+    "vendor": {
+      "id": "wisprflow",
+      "name": "Wispr Flow",
+      "domain": "wisprflow.ai"
+    }
   },
   "scripts": {
     "check": "node scripts/check.mjs",
@@ -152,7 +185,7 @@
       {
         "name": "wisprflow.get_participant_contacts",
         "permission": "wisprflow_get_participant_contacts",
-        "effect": "ask",
+        "effect": "allow",
         "readOnly": true
       }
     ],

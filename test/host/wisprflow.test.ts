@@ -19,6 +19,8 @@ const NEW = "shiny_new_tool"
 const SIGN_IN = "Run /connect and choose Wispr Flow, then press o or Enter to open the link (in a terminal, opencode mcp auth wisprflow opens it automatically)."
 /** The fake's tools: one known read, a known write when Wispr Flow has one, and one tool the plugin has never seen. */
 const SERVED = [READ, ...(WRITE ? [WRITE] : []), NEW].map((tool) => `wisprflow_${tool}`).sort()
+/** What the host lists in the namespace: Wispr Flow's tools, and the plugin's own events_list. */
+const LISTED = [...SERVED, "wisprflow_events_list"].sort()
 
 // Starting a host takes several seconds, more on a busy machine.
 setDefaultTimeout(120_000)
@@ -38,7 +40,7 @@ const hidden = (rules: readonly Rule[], action: string) => {
 const wisprflowTools = (host: Host) =>
   until("Wispr Flow's tools are registered", async () => {
     const ids = (await host.probe().tool.list()).map((tool) => tool.id).filter((id) => id.startsWith("wisprflow_"))
-    return ids.length === SERVED.length && ids.sort()
+    return ids.length === LISTED.length && ids.sort()
   })
 
 async function status(host: Host, sessionID: string) {
@@ -70,7 +72,7 @@ describe(`the plugin's own server on OpenCode ${HOST_VERSION}`, () => {
     expect(plugins.find((plugin) => plugin.id === "wisprflow.meetings")?.state.status).toBe("active")
     const { data: servers } = await host.client.mcp.list({ location: host.location })
     expect(servers.find((server) => server.name === "wisprflow")?.status).toEqual({ status: "connected" })
-    expect(await wisprflowTools(host)).toEqual(SERVED)
+    expect(await wisprflowTools(host)).toEqual(LISTED)
     const { data: skills } = await host.client.skill.list({ location: host.location })
     expect(skills.map((skill) => skill.id).filter((id) => id.startsWith("wisprflow")).sort()).toEqual([...SKILL_NAMES].sort())
     const { data: commands } = await host.client.command.list({ location: host.location })
@@ -107,6 +109,25 @@ describe(`the plugin's own server on OpenCode ${HOST_VERSION}`, () => {
     const build_ = (await agentRules(host)).get("build")!
     expect(SERVED.filter((action) => hidden(build_, action))).toEqual([])
     expect(await effect(host, "build", `wisprflow_${NEW}`)).toBe("ask")
+  })
+
+  test("events_list is a tools RPC method beside the known reads, run as the session, with its own codes", async () => {
+    const build = await session(host)
+    const call = async (method: string, input: unknown) => {
+      try {
+        return { value: (await host.client.rpc.call({ rpcID: "wisprflow.meetings.tools", method, input: input as never, location: host.location })).output as Record<string, any> }
+      } catch (error) {
+        const e = error as { type?: string; data?: { code?: string } }
+        return { type: e.type, code: e.data?.code }
+      }
+    }
+    const described = await call("describe", {})
+    expect(described.value?.methods.at(-1)).toMatchObject({ name: "events_list", kind: "plugin", action: "wisprflow_events_list" })
+    // This host signs in to the fake with no credential, so there is no sign-in to name as the owner.
+    const before = host.fake.calls.length
+    expect(await call("events_list", { sessionID: build, input: { since: "2026-10-01" } })).toEqual({ type: "failed", code: "EVENTS_OWNER_UNKNOWN" })
+    expect(await call("events_list", { sessionID: build, input: { cursor: "not-a-cursor" } })).toEqual({ type: "failed", code: "EVENTS_CURSOR_INVALID" })
+    expect(host.fake.calls.slice(before)).toEqual([])
   })
 
   test("P4: a saved 'Always allow' removes the prompt", async () => {

@@ -6,6 +6,7 @@ OpenCode server. It uses the tools RPC, `wisprflow.meetings.tools`, through `ope
 | Method | The tool |
 | --- | --- |
 | one per known read, named after Wispr Flow's tool: `search_meetings`, `get_meeting`, `list_upcoming_meetings`, `search_scratchpad_notes` and the others | `wisprflow_<method>`, such as `wisprflow_search_meetings` |
+| `events_list` | `wisprflow_events_list`, the plugin's own read: the meetings Wispr Flow captured since a cursor, as Memory's events ([configuration](configuration.md#events-list)) |
 | `describe` | none: lists the methods, their permission actions, whether OpenCode lists each tool now, and each tool's input as JSON Schema |
 
 The methods are exactly Wispr Flow's 15 read tools that the plugin knows, the ones its default rules allow
@@ -14,6 +15,10 @@ The methods are exactly Wispr Flow's 15 read tools that the plugin knows, the on
 `list_folders`, `list_meeting_series`, `list_upcoming_meetings`, `resolve_calendar_link`, `resolve_share_link`,
 `search_calendar_events`, `search_meetings` and `search_scratchpad_notes`. `get_participant_contacts` is not a
 method: it asks before it runs, and no one can answer a prompt for a script.
+
+`events_list` is the plugin's own read, not one of Wispr Flow's: it asserts `wisprflow_events_list`, then reads through
+`wisprflow_search_meetings` as the session, and gives its own `EVENTS_` codes, listed in the
+[configuration guide](configuration.md#errors).
 
 Each method runs the tool with the same input: Wispr Flow's own tool, through OpenCode's own connection and sign-in.
 The plugin never sees the OAuth token. A tool that Wispr Flow adds later is never a method, even with an allow rule.
@@ -113,7 +118,7 @@ later, and `rpc.invalid_input` for a body that is not the envelope above, with o
 
 ## What scripts cannot do
 
-- Call a tool that is not one of the 15 known reads, even with an allow rule.
+- Call a tool that is not one of the 15 known reads or the plugin's own `events_list`, even with an allow rule.
 - Change anything in Wispr Flow: none of its tools does.
 - Answer an approval prompt, or use a tool that asks.
 - Use a token: the plugin has none to give.

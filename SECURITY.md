@@ -28,6 +28,10 @@ OpenCode project.
 - Wispr Flow content is untrusted. Transcripts, notes, summaries and calendar text hold other people's words and can
   contain instructions aimed at the model. The skills tell the model to treat it as data, to keep secrets read out in
   a meeting out of its answers, and to show attendees' details only when asked about them.
+- `wisprflow_events_list` reads the meetings Wispr Flow captured through OpenCode's own `search_meetings`, and returns
+  each one's title, start, up to 5 attendees' names and emails and its `share_link`, with OpenCode's sign-in label as
+  the owner. Memory's collector calls it to copy these events to your private memory space, after you turn Wispr Flow
+  on as a source; the plugin itself sends them nowhere and stores nothing. It never reads contacts, transcripts or notes.
 - Tool results go to your model provider, like any other tool result in the session.
 - On Wispr Flow's enterprise plans, note and transcript reads through MCP are recorded in Wispr Flow's audit logs.
 - Maintainer drift check: `scripts/check-wisprflow-tools.mjs` reads a saved tool list from a file and compares the
@@ -73,7 +77,8 @@ Flow's known read tools for a script, with no model. It adds no authority:
   rules and saved approvals, as it does for the model.
 - An ask on a script's call is denied, not prompted: no one is there to answer it. The plugin's permission hook
   changes only an ask on one of its own script calls in flight, only to a deny, and leaves every other call alone.
-- Only the 15 known reads are methods. A tool that Wispr Flow adds later never is, even with an allow rule.
+- Only the 15 known reads and the plugin's own `events_list` are methods. A tool that Wispr Flow adds later never is,
+  even with an allow rule.
 - The call goes through OpenCode's own MCP connection and sign-in. The plugin never sees the token, and returns none.
 - Wispr Flow's error text reaches the script only as the first line, at most 300 characters, with tokens and URL
   query strings removed.

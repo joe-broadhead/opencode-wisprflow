@@ -23,12 +23,9 @@ All notable changes to this project are documented here. The format follows [Kee
   method that does not exist, omits the location header, or uses a field the tool does not take.
 - The CI has an `actionlint` job, and `npm run check` runs `actionlint` and the icon check.
 - The docs' tested-host sentences are checked against `TESTED_HOSTS`, and the README prints the default block in full.
-
-### Changed
-
 - tools RPC v2.1: every known tool is scriptable under a prior explicit allow. `wisprflow.meetings.tools` now has one
-  method per known tool, by exact name and with its class (all `read`), including `get_participant_contacts`, which
-  asks by default and is refused to a script until an allow rule exists. The rule is resolved before dispatch: only an
+  method per known tool, by exact name and with its class (all `read`), `get_participant_contacts` included, which the
+  default block allows like every other tool. The rule is resolved before dispatch: only an
   `allow` runs, and an `ask` is refused with no prompt and no tool call. `describe` reports each method's class, a
   session's permission and any live tool the table does not classify. A saved "Always allow" approval no longer
   authorizes an ad-hoc script. `opencode api` callers must send `-H "x-opencode-directory:$PWD"`.

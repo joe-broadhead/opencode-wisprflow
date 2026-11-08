@@ -81,7 +81,8 @@ Two skills teach the model to use Wispr Flow well:
 
 A script or a cron job can call every tool this plugin knows with no model, through `opencode api`. It runs as a
 session and its agent, under that agent's permission rules and the session's own. The rule is resolved first, so only
-a prior explicit `allow` runs: `get_participant_contacts` asks by default and is refused, and a saved "Always allow"
+a prior explicit `allow` runs: the plugin's default block allows every tool, `get_participant_contacts` included, so
+restrict a script with `access` or with a rule, and note that a saved "Always allow"
 does not authorize an ad-hoc script:
 
 ```sh

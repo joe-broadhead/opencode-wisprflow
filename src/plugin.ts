@@ -102,9 +102,9 @@ export function createWisprflowPlugin(seam: WisprflowSeam) {
       await ctx.tool.transform((editor) => {
         if (source?.type !== "conflict") editor.namespace({ name: SERVER_NAME, description: NAMESPACE_DESCRIPTION })
       })
-      await registerDefaultRules(ctx.agent, defaultRules(), report("rules"))
+      await registerDefaultRules(ctx.agent, defaultRules(options.access), report("rules"))
       const own = skills.map(({ name, path }) => ({ name, path }))
-      const read = () => readStatus(ctx, { ...(source ? { source } : {}), host, skills: own, problems: [...problems.values()] })
+      const read = () => readStatus(ctx, { access: options.access, ...(source ? { source } : {}), host, skills: own, problems: [...problems.values()] })
       // The plugin's own server, or the user's adopted one; a server at another URL is not Wispr Flow's.
       const owned = () => source?.type === "plugin" || source?.type === "adopted"
       await registerSkills(ctx.skill, skills)

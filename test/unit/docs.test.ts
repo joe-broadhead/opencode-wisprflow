@@ -5,6 +5,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { TESTED_HOSTS } from "../../src/constants.js"
 import { defaultRules } from "../../src/permissions.js"
 import { LIVE } from "./wisprflow-catalog.js"
 
@@ -77,14 +78,16 @@ describe("docs", () => {
     expect(text("docs/jelly.md")).toContain("the one line in `jelly.summary`, and beside it the mark in `jelly.icon`")
   })
 
-  // An admin copies these blocks into managed config: each must be the plugin's real block, as valid JSON.
-  test("the configuration guide prints the default rules in full, in the Permissions block and the agent fix example", () => {
+  // An admin copies these blocks into managed config: each must be the plugin's real block for that access value.
+  test("the configuration guide prints the default rules in full for every access value, and in the agent fix example", () => {
     const raw = readFileSync(join(ROOT, "docs/configuration.md"), "utf8")
-    const block = /after that rule:\n\n```json\n([\s\S]*?)\n```/.exec(raw)?.[1] ?? "[]"
-    expect(JSON.parse(block)).toEqual(defaultRules())
+    for (const access of ["all", "ask-changes", "read-only"] as const) {
+      const block = new RegExp(`\`access: "${access}"\`[\\s\\S]*?\n\n\`\`\`json\n([\\s\\S]*?)\n\`\`\``).exec(raw)?.[1] ?? "[]"
+      expect({ access, block: JSON.parse(block) }).toEqual({ access, block: defaultRules(access) })
+    }
     const example = /For an agent `reviewer`[\s\S]*?```json\n([\s\S]*?)\n```/.exec(raw)?.[1] ?? "{}"
     const permissions = (JSON.parse(example) as { agents: { reviewer: { permissions: unknown[] } } }).agents.reviewer.permissions
-    expect(permissions.slice(0, defaultRules().length)).toEqual(defaultRules())
+    expect(permissions.slice(0, defaultRules("all").length)).toEqual(defaultRules("all"))
   })
 
   // A user who relies on the privacy recipe must not have a tool that returns a transcript or a note's text left allowed.
@@ -104,5 +107,54 @@ describe("docs", () => {
     for (const name of [...READ_TOOLS, ...ASK_TOOLS]) expect(guide).toContain(`\`${name}\``)
     expect(guide).toContain("`describe`")
     expect(guide).toContain("x-opencode-directory")
+  })
+})
+
+// The README prints the block the plugin inserts, in full, generated from defaultRules(): it is what an administrator
+// copies into an agent's own permissions, so it cannot be elided or drift.
+describe("the default rules block", () => {
+  test("the README's Permissions section prints defaultRules() in full", () => {
+    const section = /## Permissions([\s\S]*?)## Configure/.exec(readFileSync(join(ROOT, "README.md"), "utf8"))?.[1] ?? ""
+    const printed = /generated from[\s\S]*?```json\n([\s\S]*?)\n```/.exec(section)?.[1] ?? "[]"
+    expect(JSON.parse(printed)).toEqual(defaultRules())
+  })
+})
+
+// Every "tested on …" mention states TESTED_HOSTS, so a release added to the list cannot leave a stale sentence behind.
+describe("tested hosts", () => {
+  const UNRELEASED = /## \[Unreleased\]([\s\S]*?)(?=\n## |$)/.exec(readFileSync(join(ROOT, "CHANGELOG.md"), "utf8"))?.[1] ?? ""
+  const SOURCES: [string, string][] = [
+    ["README.md", readFileSync(join(ROOT, "README.md"), "utf8")],
+    ["AGENTS.md", readFileSync(join(ROOT, "AGENTS.md"), "utf8")],
+    ["SECURITY.md", readFileSync(join(ROOT, "SECURITY.md"), "utf8")],
+    ["docs/configuration.md", readFileSync(join(ROOT, "docs/configuration.md"), "utf8")],
+    ["CHANGELOG.md (Unreleased)", UNRELEASED],
+  ]
+
+  test.each(SOURCES)("%s names exactly TESTED_HOSTS wherever it says what is tested", (file, text) => {
+    // The sentence that says something is tested, so a version list in the next sentence cannot leak in.
+    const mentions = text
+      .split("\n")
+      .flatMap((line) => line.split(/\.\s+/))
+      .filter((sentence) => /\btested\b/i.test(sentence))
+      // The supported range is not a tested release: drop a backticked `>=a.b.c <d.e.f` span before reading versions.
+      .map((sentence) => sentence.replace(/`[^`]*>=[^`]*`/g, ""))
+      .map((sentence) => [...sentence.matchAll(/\b\d+\.\d+\.\d+\b/g)].map((version) => version[0]!))
+      .filter((versions) => versions.length > 0)
+    expect({ file, versions: mentions.every((versions) => versions.length > 0) }).toEqual({ file, versions: true })
+    for (const versions of mentions) expect({ file, versions: [...new Set(versions)].sort() }).toEqual({ file, versions: [...TESTED_HOSTS].sort() })
+  })
+
+  test("the README's Requirements line names every tested release", () => {
+    const requirements = /## Requirements([\s\S]*?)## /i.exec(readFileSync(join(ROOT, "README.md"), "utf8"))?.[1] ?? ""
+    const named = [...requirements.matchAll(/\b\d+\.\d+\.\d+\b/g)].map((match) => match[0]).filter((version) => version !== "2.3.0")
+    expect([...new Set(named)].sort()).toEqual([...TESTED_HOSTS].sort())
+  })
+
+  // A release inside the range that ships later is the untested example, so it must be one that never ships.
+  test("the untested example is 2.2.99, and no doc names a future release as tested", () => {
+    const all = SOURCES.map(([, text]) => text).join("\n")
+    expect(all).toContain("2.2.99")
+    expect(all).not.toMatch(/\b2\.2\.(?:7|8|9[0-8])\b(?!\d)/)
   })
 })

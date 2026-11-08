@@ -41,6 +41,35 @@ const wisprflowTools = (host: Host) =>
     return ids.length === SERVED.length && ids.sort()
   })
 
+/**
+ * Runs `code` as Code Mode does, through a schedule's check program: OpenCode checks each tool's input and output and
+ * evaluates permissions with nobody present to answer a prompt. The program reports by throwing "SEEN <json>", so no
+ * schedule is ever created and no model is involved.
+ */
+async function codeMode(host: Host, sessionID: string, code: string): Promise<{ seen: unknown } | { refused: string }> {
+  let message: string
+  try {
+    const schedule = await host.client.experimental.schedule.create({
+      sessionID,
+      name: "wisprflow-host-test",
+      when: { in: "6 hours" },
+      prompt: "noop",
+      if: { code },
+    })
+    await host.client.experimental.schedule.delete({ scheduleID: schedule.id })
+    throw new Error("the check program finished without reporting")
+  } catch (error) {
+    message = error instanceof Error ? error.message : String(error)
+  }
+  const seen = /SEEN (.*)$/s.exec(message)
+  if (!seen) return { refused: message }
+  try {
+    return { seen: JSON.parse(seen[1]!) }
+  } catch {
+    return { seen: seen[1]! }
+  }
+}
+
 async function status(host: Host, sessionID: string) {
   await host.client.sessions.command({ sessionID, name: "wisprflow-status", text: "" })
   return until("/wisprflow-status posts its text", async () => {
@@ -93,29 +122,19 @@ describe(`the plugin's own server on OpenCode ${HOST_VERSION}`, () => {
     expect(await effect(host, "explore", `wisprflow_${READ}`)).toBe("deny")
     const explore = await session(host, "explore")
     expect(await attempt(host, explore, "explore", READ)).toEqual({ asked: undefined, ok: false, error: `Tool.Error: Permission denied: wisprflow_${READ}` })
-    const plan = await session(host, "plan")
-    expect(await attempt(host, plan, "plan", NEW)).toMatchObject({ asked: `wisprflow_${NEW}`, ok: false })
   })
 
-  test("P2 and H2: known reads run without a prompt, and a tool the plugin doesn't know asks", async () => {
+  // R18: every tool is allowed by default, a tool Wispr Flow adds later included, so nothing asks here.
+  test("H2: every tool runs without a prompt, the plugin's own reads and one it does not know", async () => {
     const build = await session(host)
     const before = host.fake.calls.length
     expect(await attempt(host, build, "build", READ)).toEqual({ asked: undefined, ok: true })
-    expect(await attempt(host, build, "build", NEW)).toEqual({ asked: `wisprflow_${NEW}`, ok: false, error: "Permission.DeclinedError: " })
-    if (WRITE) expect(await attempt(host, build, "build", WRITE)).toEqual({ asked: `wisprflow_${WRITE}`, ok: false, error: "Permission.DeclinedError: " })
-    expect(host.fake.calls.slice(before)).toEqual([READ])
+    expect(await attempt(host, build, "build", NEW)).toEqual({ asked: undefined, ok: true })
+    if (WRITE) expect(await attempt(host, build, "build", WRITE)).toEqual({ asked: undefined, ok: true })
+    expect(host.fake.calls.slice(before)).toEqual([READ, NEW, ...(WRITE ? [WRITE] : [])])
     const build_ = (await agentRules(host)).get("build")!
     expect(SERVED.filter((action) => hidden(build_, action))).toEqual([])
-    expect(await effect(host, "build", `wisprflow_${NEW}`)).toBe("ask")
-  })
-
-  test("P4: a saved 'Always allow' removes the prompt", async () => {
-    const build = await session(host)
-    expect(await attempt(host, build, "build", NEW, "always")).toEqual({ asked: `wisprflow_${NEW}`, ok: true })
-    expect(await attempt(host, build, "build", NEW)).toEqual({ asked: undefined, ok: true })
-    const { projectID } = await host.client.sessions.get({ sessionID: build })
-    const saved = await host.client.permission.saved.list({ projectID })
-    expect(saved.map(({ action, resource }) => ({ action, resource }))).toEqual([{ action: `wisprflow_${NEW}`, resource: "*" }])
+    expect(await effect(host, "build", `wisprflow_${NEW}`)).toBe("allow")
   })
 
   test("P5: an agent defined only in user config gets no rules, and Wispr Flow tools run there unprompted", async () => {
@@ -125,13 +144,42 @@ describe(`the plugin's own server on OpenCode ${HOST_VERSION}`, () => {
     expect(await attempt(host, sessionID, "reviewer", NEW)).toEqual({ asked: undefined, ok: true })
   })
 
+  // R2: the same proofs on the Code Mode path, inside the host's `execute`, where nobody can answer a prompt.
+  test("R2 Code Mode: a read runs; an ask and a deny are refused with nothing sent; an unknown name is refused", async () => {
+    await wisprflowTools(host)
+    const run = async (sessionID: string, tool: string) =>
+      codeMode(host, sessionID, `const r = await tools.wisprflow[${JSON.stringify(tool)}]({}); throw new Error("SEEN " + JSON.stringify(r))`)
+    const created = async (permissions?: Rule[]) => (await host.client.sessions.create({ agent: "build", location: host.location, ...(permissions ? { permissions } : {}) })).id
+
+    // A known read runs inside Code Mode, and Wispr Flow is called once.
+    const before = host.fake.calls.length
+    expect(await run(await created(), READ)).toHaveProperty("seen")
+    expect(host.fake.calls.slice(before)).toEqual([READ])
+
+    // An ask is refused before the tool runs: nothing reaches Wispr Flow and no prompt is left waiting.
+    const asking = host.fake.calls.length
+    const askSession = await created([{ action: `wisprflow_${READ}`, resource: "*", effect: "ask" }])
+    const asked = await run(askSession, READ)
+    expect(asked).toHaveProperty("refused")
+    expect((asked as { refused: string }).refused).toMatch(/needs approval|nobody is present|not permitted|declined/i)
+    expect(host.fake.calls.slice(asking)).toEqual([])
+    expect(await host.client.permission.list({ sessionID: askSession })).toEqual([])
+
+    // A deny refuses, and a name that is not a method is not callable.
+    const denied = await run(await created([{ action: `wisprflow_${READ}`, resource: "*", effect: "deny" }]), READ)
+    expect(denied).toHaveProperty("refused")
+    const unknown = await run(await created(), "no_such_tool")
+    expect(unknown).toHaveProperty("refused")
+    expect(host.fake.calls.slice(asking)).toEqual([])
+  })
+
   test("H5: /wisprflow-status reports the connection, the plugin's own skills, new tools, the unguarded agent and its fix", async () => {
     await wisprflowTools(host)
     const text = await status(host, await session(host))
     expect(text).toContain(`- Connection: connected (${host.fake.url}, registered by this plugin)`)
     // The skills OpenCode lists are the plugin's own files, so none is reported as replaced.
     expect(text).toContain("- Skills: the plugin's own\n")
-    expect(text).toContain(`- Tools: ${SERVED.length} available, 1 unknown: ${NEW} (unknown tools ask before running)\n`)
+    expect(text).toContain(`- Tools: ${SERVED.length} available, 1 unknown: ${NEW} (new tools run too)\n`)
     expect(text).toContain(`- Agents without default rules: reviewer\n${AGENT_RULES}\n`)
     expect(text).toContain(`- Next step: ${AGENTS_NEXT_STEP}`)
     expect(text).toContain(`- OpenCode: ${HOST_VERSION} (${TESTED_HOSTS.includes(HOST_VERSION) ? "tested" : "untested"}; supported range ${SUPPORTED_HOST})`)
@@ -151,6 +199,55 @@ describe(`the plugin's own server on OpenCode ${HOST_VERSION}`, () => {
   })
 })
 
+describe(`access on OpenCode ${HOST_VERSION}`, () => {
+  // R18: one host test per value, on the tools RPC path, where a refusal must reach nothing.
+  const call = async (host: Host, sessionID: string, method: string, input: unknown = {}): Promise<{ value?: unknown; refused?: string }> =>
+    host.client.rpc
+      .call({ rpcID: "wisprflow.meetings.tools", method, input: { sessionID, input } as never, location: host.location })
+      .then((result) => ({ value: result.output }))
+      .catch((error: unknown) => ({ refused: (error as { data?: { code?: string }; message?: string }).data?.code ?? String(error) }))
+
+  for (const [access, expectation] of [
+    ["ask-changes", "refuse"],
+    ["read-only", "deny"],
+  ] as const) {
+    describe(access, () => {
+      let host: Host
+      beforeAll(async () => {
+        host = await startHost({ options: { access } })
+        await wisprflowTools(host)
+      })
+      afterAll(() => host?.close())
+
+      test(`the block is the ${access} one, and a read still runs on the tools RPC path`, async () => {
+        const rules = (await agentRules(host)).get("build")!
+        expect(rules.slice(1, 1 + defaultRules(access).length)).toEqual(defaultRules(access))
+        const before = host.fake.calls.length
+        const sessionID = await session(host)
+        expect(await call(host, sessionID, READ)).toHaveProperty("value")
+        expect(host.fake.calls.slice(before)).toEqual([READ])
+      })
+
+      test(`${expectation === "deny" ? "a denied" : "an asking"} tool never reaches Wispr Flow, and an unknown name is not a method`, async () => {
+        const before = host.fake.calls.length
+        // Every known Wispr Flow tool only reads, so the refused call is a read with a session rule of its own: the
+        // same shape as a write under this access value, with nothing sent and no prompt left waiting.
+        const sessionID = (
+          await host.client.sessions.create({
+            agent: "build",
+            location: host.location,
+            permissions: [{ action: `wisprflow_${READ}`, resource: "*", effect: expectation === "deny" ? "deny" : "ask" }],
+          })
+        ).id
+        expect(await call(host, sessionID, READ)).toMatchObject({ refused: "PERMISSION_DENIED" })
+        expect((await call(host, await session(host), NEW)).refused ?? "").toContain("Unknown RPC method")
+        expect(host.fake.calls.slice(before)).toEqual([])
+        expect(await host.client.permission.list({ sessionID })).toEqual([])
+      })
+    })
+  }
+})
+
 describe("the user's own wisprflow server at the plugin's URL", () => {
   let host: Host
   beforeAll(async () => {
@@ -166,7 +263,7 @@ describe("the user's own wisprflow server at the plugin's URL", () => {
     expect(new Set(host.fake.markers)).toEqual(new Set(["user"]))
     const text = await status(host, await session(host))
     expect(text).toContain(`- Connection: connected (${host.fake.url}, your own mcp.servers.wisprflow, used unchanged)`)
-    expect(text).toContain("- Access: reads run without asking;")
+    expect(text).toContain("- Access: every tool runs without asking")
   })
 })
 

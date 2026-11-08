@@ -2,6 +2,7 @@ import type { Plugin, Rpc } from "@opencode/plugin"
 import { DISPLAY_NAME, PLUGIN_ID, SERVER_NAME, TESTED_HOSTS } from "./constants.js"
 import { isSupportedHost, type HostCheck } from "./host-version.js"
 import { shortReason } from "./redact.js"
+import type { Access } from "./options.js"
 import { defaultRules, unguardedAgents, type Rule } from "./permissions.js"
 import { ASK_TOOLS, classify, WRITE_TOOLS } from "./wisprflow-tools.js"
 import { VERSION } from "./version.js"
@@ -30,6 +31,8 @@ export interface StatusFacts {
   readonly server?: { readonly status: "connected" | "pending" | "disabled" | "failed" | "needs_auth"; readonly error?: string }
   readonly source?: ServerSource
   readonly account?: string
+  /** What the default rules allow: the `access` option, `all` when the plugin options were not read. */
+  readonly access?: Access
   readonly host: HostCheck
   /** The names of the tools the `wisprflow` server serves, without the `wisprflow_` prefix. */
   readonly tools?: readonly string[]
@@ -51,6 +54,8 @@ export interface Status {
   readonly error?: string
   readonly account?: string
   readonly source?: ServerSource
+  /** What the default rules allow: `all`, `ask-changes` or `read-only`. */
+  readonly access: Access
   /** How many Wispr Flow tools OpenCode lists. */
   readonly tools: number
   /** How many of them the plugin does not know. */
@@ -70,9 +75,10 @@ export interface Status {
 const SIGN_IN = `Run /connect and choose ${DISPLAY_NAME}, then press o or Enter to open the link (in a terminal, opencode mcp auth ${SERVER_NAME} opens it automatically).`
 
 /** The default rules to paste into an agent's own permissions, one rule a line, as a JSON array body. */
-const AGENT_RULES = defaultRules()
-  .map((rule, index, rules) => `  ${JSON.stringify(rule)}${index < rules.length - 1 ? "," : ""}`)
-  .join("\n")
+const agentRulesText = (access: Access) =>
+  defaultRules(access)
+    .map((rule, index, rules) => `  ${JSON.stringify(rule)}${index < rules.length - 1 ? "," : ""}`)
+    .join("\n")
 
 /** The next step while agents lack the rules: the family's one fixed sentence. */
 const AGENTS_NEXT_STEP =
@@ -84,9 +90,13 @@ const NO_TOOLS_NEXT_STEP =
 
 const NOTHING_TO_DO = "Nothing to do."
 
-/** The permission posture, one fixed sentence: it follows the known lists and the default rules. */
-const ASKING = [...ASK_TOOLS, ...(WRITE_TOOLS.length ? ["changes"] : []), "new tools"]
-const ACCESS_TEXT = `reads run without asking; ${ASKING.slice(0, -1).join(", ")}${ASKING.length > 1 ? " and " : ""}${ASKING.at(-1)} ask first`
+/** The permission posture, one fixed sentence per `access` value, from the tool lists. */
+const accessText = (access: Access) => {
+  if (access === "all") return "every tool runs without asking, reads and new tools included"
+  if (access === "read-only") return "reads run without asking; every other tool is denied"
+  const asking = [...ASK_TOOLS, ...(WRITE_TOOLS.length ? ["changes"] : []), "new tools"]
+  return `reads run without asking; ${asking.slice(0, -1).join(", ")}${asking.length > 1 ? " and " : ""}${asking.at(-1)} ask first`
+}
 
 const TESTED_TEXT = `${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}`
 const LISTED_UNKNOWN = 20
@@ -114,6 +124,7 @@ export function buildStatus(facts: StatusFacts): Status {
     ...(error ? { error } : {}),
     ...(facts.account ? { account: facts.account } : {}),
     ...(facts.source ? { source: facts.source } : {}),
+    access: facts.access ?? "all",
     tools: facts.tools?.length ?? 0,
     unknownCount: unknown.length,
     unknownTools: unknown.filter((name) => SAFE_NAME.test(name)).slice(0, LISTED_UNKNOWN),
@@ -196,12 +207,13 @@ function skillsText({ shadowedSkills }: Status) {
   return shadowedSkills.length ? shadowedSkills.map((skill) => `${skill.name} is replaced by ${skill.path}`).join("; ") : "the plugin's own"
 }
 
-function toolsText({ state, tools, unknownCount, unknownTools }: Status) {
+function toolsText({ state, tools, unknownCount, unknownTools, access }: Status) {
   if (state === "connected" && tools === 0) return `0 available: ${DISPLAY_NAME} lists no tools for this account`
   if (unknownCount === 0) return `${tools} available, 0 unknown`
   const more = unknownCount - unknownTools.length
   const names = unknownTools.length ? `: ${unknownTools.join(", ")}${more > 0 ? ` and ${more} more` : ""}` : ""
-  return `${tools} available, ${unknownCount} unknown${names} (unknown tools ask before running)`
+  const posture = access === "all" ? "new tools run too" : access === "read-only" ? "new tools are denied" : "new tools ask before running"
+  return `${tools} available, ${unknownCount} unknown${names} (${posture})`
 }
 
 /** The OpenCode row: the version, whether it is tested, the supported range, then any setup problems. */
@@ -222,10 +234,10 @@ export function formatStatus(status: Status) {
     `${DISPLAY_NAME} status`,
     `- Connection: ${STATE_TEXT[status.state]}${details ? ` (${details})` : ""}`,
     `- Account: ${status.account ?? `account name not reported by ${DISPLAY_NAME}'s MCP`}`,
-    `- Access: ${ACCESS_TEXT}`,
+    `- Access: ${accessText(status.access)}`,
     `- Skills: ${skillsText(status)}`,
     `- Tools: ${toolsText(status)}`,
-    `- Agents without default rules: ${agents.length ? `${agents.join(", ")}\n${AGENT_RULES}` : "none"}`,
+    `- Agents without default rules: ${agents.length ? `${agents.join(", ")}\n${agentRulesText(status.access)}` : "none"}`,
     `- OpenCode: ${hostText(status)}`,
     `- Next step: ${status.nextStep}`,
   ].join("\n")
@@ -241,6 +253,7 @@ export interface StatusContext {
 
 /** What setup knows: the server's owner, the host check, the plugin's own skills and any setup problems. */
 interface SetupFacts {
+  readonly access: Access
   readonly source?: ServerSource
   readonly host: HostCheck
   readonly skills: readonly { readonly name: string; readonly path: string }[]
@@ -259,6 +272,7 @@ export async function readStatus(ctx: StatusContext, facts: SetupFacts) {
   const server = servers.data.find((entry) => entry.name === SERVER_NAME)
   const connection = server?.integrationID ? await ctx.integration.connection.active(server.integrationID).catch(() => undefined) : undefined
   return buildStatus({
+    access: facts.access,
     ...(facts.source ? { source: facts.source } : {}),
     host: facts.host,
     problems: facts.problems,
@@ -293,12 +307,13 @@ export const StatusRpc = {
       input: { type: "object" },
       output: {
         type: "object",
-        required: ["version", "state", "tools", "unknownCount", "unknownTools", "unguardedAgents", "shadowedSkills", "host", "problems", "nextStep"],
+        required: ["version", "state", "access", "tools", "unknownCount", "unknownTools", "unguardedAgents", "shadowedSkills", "host", "problems", "nextStep"],
         properties: {
           version: { type: "string" },
           state: { enum: ["connected", "sign_in_required", "connecting", "disabled", "failed", "not_configured", "conflict"] },
           error: { type: "string" },
           account: { type: "string" },
+          access: { enum: ["all", "ask-changes", "read-only"] },
           source: {
             type: "object",
             required: ["type", "url"],

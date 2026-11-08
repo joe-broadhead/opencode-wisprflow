@@ -4,27 +4,41 @@ import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js
 import { agentEditor, allow, builtInAgents, transforms, type AgentEditor, type FakeAgent } from "./fake.js"
 
 const [READ_A, READ_B] = READ_TOOLS as [string, string]
-// A known write when Wispr Flow lists one; an unknown tool asks the same way.
+// A known write when Wispr Flow lists one; an unknown tool follows the same rule.
 const WRITE = WRITE_TOOLS[0] ?? "made_up_write"
 const ask: Rule = { action: "wisprflow_*", resource: "*", effect: "ask" }
+const denyAll: Rule = { action: "wisprflow_*", resource: "*", effect: "deny" }
 const effects = (rules: readonly Rule[]) => [`wisprflow_${READ_A}`, `wisprflow_${READ_B}`, `wisprflow_${WRITE}`, "wisprflow_shiny_new_tool"].map((action) => evaluate(rules, action))
 
 describe("defaultRules", () => {
-  test("ask for every Wispr Flow tool, then allow each known read, then ask for the reads that ask, and deny nothing", () => {
+  test("allow every Wispr Flow tool by default, reads and a tool Wispr Flow adds later alike", () => {
     const rules = defaultRules()
-    expect(rules[0]).toEqual(ask)
+    expect(rules[0]).toEqual({ action: "wisprflow_*", resource: "*", effect: "allow" })
     expect(rules.slice(1)).toEqual([
-      ...READ_TOOLS.map((tool): Rule => ({ action: `wisprflow_${tool}`, resource: "*", effect: "allow" })),
-      ...ASK_TOOLS.map((tool): Rule => ({ action: `wisprflow_${tool}`, resource: "*", effect: "ask" })),
+      ...[...READ_TOOLS, ...ASK_TOOLS].map((tool): Rule => ({ action: `wisprflow_${tool}`, resource: "*", effect: "allow" })),
+      ...WRITE_TOOLS.map((tool): Rule => ({ action: `wisprflow_${tool}`, resource: "*", effect: "allow" })),
     ])
-    expect(rules.filter((rule) => rule.effect === "deny")).toEqual([])
+    expect(rules.filter((rule) => rule.effect !== "allow")).toEqual([])
+    expect(effects([allow("*"), ...defaultRules()])).toEqual(["allow", "allow", "allow", "allow"])
   })
 
-  test("reads allow, and writes and new tools ask", () => {
-    expect(effects([allow("*"), ...defaultRules()])).toEqual(["allow", "allow", "ask", "ask"])
-    for (const tool of [...ASK_TOOLS, ...WRITE_TOOLS]) expect(evaluate([allow("*"), ...defaultRules()], `wisprflow_${tool}`)).toBe("ask")
-    // A user's later allow still wins over the plugin's ask.
-    expect(evaluate([allow("*"), ...defaultRules(), allow("wisprflow_get_participant_contacts")], "wisprflow_get_participant_contacts")).toBe("allow")
+  test("ask-changes allows reads and asks for everything else, new tools included", () => {
+    const rules = defaultRules("ask-changes")
+    expect(rules[0]).toEqual(ask)
+    expect(effects([allow("*"), ...rules])).toEqual(["allow", "allow", "ask", "ask"])
+    for (const tool of ASK_TOOLS) expect(evaluate([allow("*"), ...rules], `wisprflow_${tool}`)).toBe("allow")
+  })
+
+  test("read-only allows reads and denies everything else, new tools included", () => {
+    const rules = defaultRules("read-only")
+    expect(rules[0]).toEqual(denyAll)
+    expect(effects([allow("*"), ...rules])).toEqual(["allow", "allow", "deny", "deny"])
+    for (const tool of ASK_TOOLS) expect(evaluate([allow("*"), ...rules], `wisprflow_${tool}`)).toBe("allow")
+  })
+
+  test("a user's later rule still wins, whichever access the block came from", () => {
+    expect(evaluate([allow("*"), ...defaultRules("ask-changes"), allow(`wisprflow_${WRITE}`)], `wisprflow_${WRITE}`)).toBe("allow")
+    expect(evaluate([allow("*"), ...defaultRules("all"), { action: `wisprflow_${READ_A}`, resource: "*", effect: "deny" }], `wisprflow_${READ_A}`)).toBe("deny")
   })
 })
 
@@ -70,14 +84,16 @@ describe("insertRules", () => {
     insertRules(explore.permissions, defaultRules())
     expect(effects(explore.permissions)).toEqual(["deny", "deny", "deny", "deny"])
     insertRules(plan.permissions, defaultRules())
-    expect(effects(plan.permissions)).toEqual(["allow", "allow", "ask", "ask"])
+    expect(effects(plan.permissions)).toEqual(["allow", "allow", "allow", "allow"])
+    insertRules(plan.permissions, defaultRules("ask-changes"))
+    expect(effects(plan.permissions)).toEqual(["allow", "allow", "allow", "allow"])
   })
 
   test("the user's rules come later and win, both ways", () => {
     const permissions = [allow("*")]
     insertRules(permissions, defaultRules())
     permissions.push(allow(`wisprflow_${WRITE}`), { action: `wisprflow_${READ_A}`, resource: "*", effect: "ask" })
-    expect(effects(permissions)).toEqual(["ask", "allow", "allow", "ask"])
+    expect(effects(permissions)).toEqual(["ask", "allow", "allow", "allow"])
   })
 })
 
@@ -116,7 +132,8 @@ describe("unguardedAgents", () => {
       { id: "other-plugin-first", permissions: [allow("*"), allow("github_*"), ...defaultRules()] },
       // The block before the base allow does not count: the base allow comes later and wins.
       { id: "before-base", permissions: [...defaultRules(), allow("*")] },
-      // Only the marker, not the block: a new tool asks, so no fix is needed.
+      // The ask-changes marker is not the all-allow block, so the all-allow block is still added, and the marker
+      // would leave a new tool asking if it were all an agent had. It is not listed: its own rules restrict.
       { id: "marker-only", permissions: [allow("*"), { ...ask }] },
       { id: "locked", permissions: [allow("*"), { action: "*", resource: "*", effect: "deny" as const }] },
       { id: "denies", permissions: [allow("*"), { action: "wisprflow_*", resource: "*", effect: "deny" as const }] },

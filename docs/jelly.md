@@ -23,10 +23,10 @@ rule, never reach them. Jelly writes each declared `ask` or `deny` as that tool'
 (the person's own choice replaces it), and denies a read-only helper every tool not marked
 `readOnly`. A declared `allow` changes nothing in Jelly.
 
-- Ask: `wisprflow_get_participant_contacts`. It only reads, but it returns other people's job titles, companies and
-  LinkedIn profiles, so it asks, in Jelly as in OpenCode.
+- Ask: none. Every tool is allowed by default, in Jelly as in OpenCode.
 - Off: none.
-- Everything else runs, as the plugin's own rules let it.
+- Everything else runs. `get_participant_contacts` only reads, but it returns other people's job titles, companies and
+  LinkedIn profiles; to make it ask, add a later `ask` rule for `wisprflow_get_participant_contacts`.
 
 A tool the upstream server adds later is not declared, so in Jelly it is not asked about by
 default. Keep `jelly.tools` in step with the known-tool list; `test/unit/jelly.test.ts` checks

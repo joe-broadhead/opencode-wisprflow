@@ -40,10 +40,12 @@ What the model can do in Wispr Flow is limited by three layers, in this order:
 1. **Wispr Flow's server.** Every tool it offers only reads, and it applies the account's and the organisation's own
    settings, such as Cloud Sync, HIPAA and an admin's MCP or Scratchpad switch. If you define
    `mcp.servers.wisprflow` yourself, the plugin adopts it only at exactly `https://api.wisprflow.ai/connect/mcp`.
-2. **Default permission rules.** Every Wispr Flow tool asks before it runs, except the 15 read tools listed in
-   `src/wisprflow-tools.ts`, which run without a prompt. `get_participant_contacts`, which Wispr Flow lists only for
-   accounts with Wispr Contacts, asks too, because it returns other people's profiles. A tool Wispr Flow adds later
-   asks.
+2. **Default permission rules: everything is allowed.** Every tool the plugin registers runs without a prompt,
+   including a tool Wispr Flow adds later, so an agent can read any meeting, transcript, note, calendar entry or
+   contact the signed-in account can see. Nothing in this plugin changes or deletes anything in Wispr Flow. To
+   restrict it, set the plugin option `"access": "ask-changes"` (reads run, everything else asks) or
+   `"access": "read-only"` (reads run, everything else is denied), or add your own later rules. The README's
+   Permissions section has the three blocks, and `defaultRules(access)` in `src/permissions.ts` generates them.
 3. **Your OpenCode permissions.** Your `permissions` rules and saved "Always allow" answers override the default
    rules. A `deny` you configure always wins.
 
@@ -71,9 +73,10 @@ Flow's every known tool for a script, with no model. It adds no authority:
 - A script names a session that names an agent, and runs as them. The rule for the tool's permission action is resolved
   before it runs, in OpenCode's own order (the agent's rules, then the session's, the last match winning). Only an
   `allow` runs; an `ask` and a `deny` are refused with no tool call.
-- An ask is refused, not prompted: no one is there to answer it. `get_participant_contacts` asks by default, so a script
-  is refused it until an allow rule exists. A saved "Always allow" approval is not part of the agent's and the
-  session's rules, so it does not authorize an ad-hoc script. The plugin's permission hook changes only an ask on one
+- A script gets the same default as the model: every known tool is allowed at `access: "all"`, so a script can read
+  everything the account can. Under `"ask-changes"` an ask is refused, not prompted: no one is there to answer it. A
+  saved "Always allow" approval is not part of the agent's and the session's rules, so it does not authorize an ad-hoc
+  script; a script's grant is a rule in config, or `"access"`. The plugin's permission hook changes only an ask on one
   of its own script calls in flight, only to a deny, and leaves every other call alone.
 - Every known tool is a method, with its class (always `read`) shown by `describe`. A tool that Wispr Flow adds later
   is not a method until this plugin classifies it.

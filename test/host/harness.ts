@@ -70,6 +70,8 @@ export async function startHost(input: HostInput = {}) {
   const probes = new Map<string, Plugin.Context>()
   const probe = Plugin.define({ id: "wisprflow.host-test.probe", setup: (ctx) => void probes.set(ctx.location.directory, ctx) })
   const config = {
+    // A schedule's check program is how a host test runs Code Mode with nobody present to answer a prompt.
+    experimental: { schedules: true },
     // Keep the built-in local providers from probing their default ports.
     providers: { lmstudio: { settings: { baseURL: "" } }, ollama: { settings: { baseURL: "" } }, vllm: { settings: { baseURL: "" } } },
     ...input.config?.(fake.url),

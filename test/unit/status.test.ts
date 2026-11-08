@@ -10,7 +10,7 @@ import { allow } from "./fake.js"
 
 const SIGN_IN = "Run /connect and choose Wispr Flow, then press o or Enter to open the link (in a terminal, opencode mcp auth wisprflow opens it automatically)."
 const NOTHING_TO_DO = "Nothing to do."
-const ACCESS = "reads run without asking; get_participant_contacts and new tools ask first"
+const ACCESS = "every tool runs without asking, reads and new tools included"
 /** The default rules as /wisprflow-status shows them: one rule a line, a JSON array body. */
 const AGENT_RULES = defaultRules().map((rule, index, rules) => `  ${JSON.stringify(rule)}${index < rules.length - 1 ? "," : ""}`).join("\n")
 
@@ -30,6 +30,7 @@ describe("buildStatus", () => {
       version: VERSION,
       state: "connected",
       account: "Acme",
+      access: "all",
       source: { type: "plugin", url: ENDPOINT },
       tools: 1,
       unknownCount: 0,
@@ -117,7 +118,7 @@ describe("buildStatus", () => {
     expect(status.tools).toBe(3 + ASK_TOOLS.length + WRITE_TOOLS.length)
     expect(status.unknownCount).toBe(2)
     expect(status.unknownTools).toEqual(["shiny_new_tool", "get_dictation_history"])
-    expect(formatStatus(status)).toContain(`- Tools: ${3 + ASK_TOOLS.length + WRITE_TOOLS.length} available, 2 unknown: shiny_new_tool, get_dictation_history (unknown tools ask before running)`)
+    expect(formatStatus(status)).toContain(`- Tools: ${3 + ASK_TOOLS.length + WRITE_TOOLS.length} available, 2 unknown: shiny_new_tool, get_dictation_history (new tools run too)`)
   })
 
   test("names unknown tools in any case, and with dashes: the characters OpenCode keeps in a permission action", () => {
@@ -132,8 +133,8 @@ describe("buildStatus", () => {
     const status = buildStatus({ ...base, tools: [READ, ...odd, ...many] })
     expect(status.unknownCount).toBe(29)
     expect(status.unknownTools).toEqual(many.slice(0, 20))
-    expect(formatStatus(status)).toContain(`- Tools: 30 available, 29 unknown: ${many.slice(0, 20).join(", ")} and 9 more (unknown tools ask before running)`)
-    expect(formatStatus(buildStatus({ ...base, tools: odd }))).toContain("- Tools: 4 available, 4 unknown (unknown tools ask before running)")
+    expect(formatStatus(status)).toContain(`- Tools: 30 available, 29 unknown: ${many.slice(0, 20).join(", ")} and 9 more (new tools run too)`)
+    expect(formatStatus(buildStatus({ ...base, tools: odd }))).toContain("- Tools: 4 available, 4 unknown (new tools run too)")
   })
 
   test("names agents without the default rules, with the block to paste, and points the next step at it", () => {
@@ -248,7 +249,7 @@ function statusContext(overrides: { account?: Promise<unknown>; integrationID?: 
 describe("readStatus", () => {
   test("reads connection, account, tools, agents and skills through public APIs", async () => {
     const account = Promise.resolve({ type: "credential", id: "c", label: "Acme account", method: "oauth" })
-    const status = await readStatus(statusContext({ integrationID: "mcp_1", account }), { source: { type: "plugin", url: ENDPOINT }, host, skills: own, problems: [] })
+    const status = await readStatus(statusContext({ integrationID: "mcp_1", account }), { access: "all", source: { type: "plugin", url: ENDPOINT }, host, skills: own, problems: [] })
     expect(status).toMatchObject({
       state: "connected",
       account: "Acme account",
@@ -260,7 +261,7 @@ describe("readStatus", () => {
   })
 
   test("a failed account or skill lookup leaves that part out, and the rest stands", async () => {
-    const status = await readStatus(statusContext({ integrationID: "mcp_1", account: Promise.reject(new Error("offline")), skills: Promise.reject(new Error("no skills")) }), { host, skills: own, problems: [] })
+    const status = await readStatus(statusContext({ integrationID: "mcp_1", account: Promise.reject(new Error("offline")), skills: Promise.reject(new Error("no skills")) }), { access: "all", host, skills: own, problems: [] })
     expect(status.account).toBeUndefined()
     expect(status.shadowedSkills).toEqual([])
     expect(status.state).toBe("connected")
@@ -334,7 +335,7 @@ describe("status RPC", () => {
     expect(Object.keys(StatusRpc.methods.status.errors)).toEqual(["unavailable"])
   })
 
-  test("has the fields every plugin of this family shares, with their names, and no access mode", () => {
+  test("has the fields every plugin of this family shares, with their names, and the access mode", () => {
     const status = buildStatus(base)
     expect({ version: status.version, host: status.host, state: status.state, unguardedAgents: status.unguardedAgents, nextStep: status.nextStep }).toEqual({
       version: VERSION,
@@ -343,7 +344,8 @@ describe("status RPC", () => {
       unguardedAgents: [],
       nextStep: NOTHING_TO_DO,
     })
-    for (const old of ["connection", "agentsWithoutRules", "access"]) expect(old in status).toBe(false)
+    for (const old of ["connection", "agentsWithoutRules", "readOnly"]) expect(old in status).toBe(false)
+    expect(status.access).toBe("all")
     expect(StatusRpc.methods.status.output.required).toEqual(expect.arrayContaining(["version", "host", "state", "unguardedAgents", "nextStep"]))
   })
 

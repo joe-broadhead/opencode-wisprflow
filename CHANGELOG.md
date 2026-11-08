@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- `access`, the plugin option every OpenCode plugin of this family has: `"all"` (the default), `"ask-changes"` and
+  `"read-only"`. It generates the default permission block from the tool classes, and `/wisprflow-status` shows it in
+  the `Access` row.
+- `assets/icon-128.png` and `assets/icon-256.png`, with `opencode.icons` and `opencode.vendor` in `package.json`, and
+  `scripts/check-icons.mjs`, the family icon contract's check.
+
+### Changed
+
+- **Every Wispr Flow tool is allowed by default.** The plugin's generated block allows every known tool and the
+  `wisprflow_*` namespace, so a tool Wispr Flow adds later runs without a prompt too; `get_participant_contacts` is no
+  longer an ask. Restrict it with `access`, with an agent's own rules, or with a rule per tool; the README's
+  Permissions section and SECURITY say what an all-allow default means here.
+- `docs/scripting.md` is the family's scripting contract: the strict envelope, the location section and its unload
+  note, the result wording, and the refusal table, with an example-parsing test that fails when a doc example names a
+  method that does not exist, omits the location header, or uses a field the tool does not take.
+- The CI has an `actionlint` job, and `npm run check` runs `actionlint` and the icon check.
+- The docs' tested-host sentences are checked against `TESTED_HOSTS`, and the README prints the default block in full.
+
 ### Changed
 
 - tools RPC v2.1: every known tool is scriptable under a prior explicit allow. `wisprflow.meetings.tools` now has one

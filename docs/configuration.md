@@ -91,9 +91,36 @@ OpenCode keeps the sign-in under the server's name and address, so changing eith
 
 ## Permissions
 
-OpenCode asserts every MCP call itself, with the action `wisprflow_<tool>` and the resource `*`. The plugin adds these
-rules to every agent that starts with the base rule `{ "action": "*", "resource": "*", "effect": "allow" }`, directly
-after that rule:
+**Every tool is allowed by default.** OpenCode asserts every MCP call itself, with the action `wisprflow_<tool>` and the
+resource `*`. The plugin adds the rules for the `access` option to every agent that starts with the base rule
+`{ "action": "*", "resource": "*", "effect": "allow" }`, directly after that rule. The block is generated from
+`defaultRules(access)` in `src/permissions.ts`, and each value's block is printed below in full.
+
+`access: "all"` (the default) allows every tool the plugin registers, and any tool Wispr Flow adds later:
+
+```json
+[
+  { "action": "wisprflow_*", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_calendar_event", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_meeting", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_meeting_by_calendar_id", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_meeting_participants_enriched", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_scratchpad_note", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_upcoming_meeting", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_list_folder_meetings", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_list_folders", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_list_meeting_series", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_list_upcoming_meetings", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_resolve_calendar_link", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_resolve_share_link", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_search_calendar_events", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_search_scratchpad_notes", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "allow" }
+]
+```
+
+`access: "ask-changes"` allows the reads and asks for everything else, new tools included:
 
 ```json
 [
@@ -113,14 +140,39 @@ after that rule:
   { "action": "wisprflow_search_calendar_events", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_scratchpad_notes", "resource": "*", "effect": "allow" },
-  { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "ask" }
+  { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "allow" }
+]
+```
+
+`access: "read-only"` allows the reads and denies everything else, new tools included:
+
+```json
+[
+  { "action": "wisprflow_*", "resource": "*", "effect": "deny" },
+  { "action": "wisprflow_get_calendar_event", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_meeting", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_meeting_by_calendar_id", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_meeting_participants_enriched", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_scratchpad_note", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_upcoming_meeting", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_list_folder_meetings", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_list_folders", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_list_meeting_series", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_list_upcoming_meetings", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_resolve_calendar_link", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_resolve_share_link", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_search_calendar_events", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_search_scratchpad_notes", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "allow" }
 ]
 ```
 
 `READ_TOOLS` in `src/wisprflow-tools.ts` lists the 15 read tools Wispr Flow lists for every account. `ASK_TOOLS` lists
 `get_participant_contacts`, which Wispr Flow lists only for accounts with Wispr Contacts: it returns other people's job
-titles, companies and LinkedIn profiles, so it asks, although it only reads. No Wispr Flow tool changes anything. A
-tool Wispr Flow adds later matches only `wisprflow_*`, so it asks, and `/wisprflow-status` names it.
+titles, companies and LinkedIn profiles, and it is a read, so it is allowed at every `access` value; add a later `ask`
+or `deny` rule for it if that is too much. No Wispr Flow tool changes anything. Under `ask-changes` a tool Wispr Flow
+adds later matches only `wisprflow_*`, so it asks, and `/wisprflow-status` names it.
 
 OpenCode uses the last rule that matches, so everything after the plugin's rules wins:
 
@@ -185,24 +237,23 @@ own:
       "description": "Reviews changes",
       "mode": "subagent",
       "permissions": [
-        { "action": "wisprflow_*", "resource": "*", "effect": "ask" },
-        { "action": "wisprflow_get_calendar_event", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_get_meeting", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_get_meeting_by_calendar_id", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_get_meeting_participants_enriched", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_get_scratchpad_note", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_get_upcoming_meeting", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_list_folder_meetings", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_list_folders", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_list_meeting_series", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_list_upcoming_meetings", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_resolve_calendar_link", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_resolve_share_link", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_search_calendar_events", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_search_scratchpad_notes", "resource": "*", "effect": "allow" },
-        { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "ask" },
-        { "action": "wisprflow_get_meeting", "resource": "*", "effect": "ask" }
+        { "action": "wisprflow_*", "resource": "*", "effect": "allow" },
+        {"action":"wisprflow_get_calendar_event","resource":"*","effect":"allow"},
+        {"action":"wisprflow_get_meeting","resource":"*","effect":"allow"},
+        {"action":"wisprflow_get_meeting_by_calendar_id","resource":"*","effect":"allow"},
+        {"action":"wisprflow_get_meeting_participants_enriched","resource":"*","effect":"allow"},
+        {"action":"wisprflow_get_scratchpad_note","resource":"*","effect":"allow"},
+        {"action":"wisprflow_get_upcoming_meeting","resource":"*","effect":"allow"},
+        {"action":"wisprflow_list_folder_meetings","resource":"*","effect":"allow"},
+        {"action":"wisprflow_list_folders","resource":"*","effect":"allow"},
+        {"action":"wisprflow_list_meeting_series","resource":"*","effect":"allow"},
+        {"action":"wisprflow_list_upcoming_meetings","resource":"*","effect":"allow"},
+        {"action":"wisprflow_resolve_calendar_link","resource":"*","effect":"allow"},
+        {"action":"wisprflow_resolve_share_link","resource":"*","effect":"allow"},
+        {"action":"wisprflow_search_calendar_events","resource":"*","effect":"allow"},
+        {"action":"wisprflow_search_meetings","resource":"*","effect":"allow"},
+        {"action":"wisprflow_search_scratchpad_notes","resource":"*","effect":"allow"},
+        {"action":"wisprflow_get_participant_contacts","resource":"*","effect":"allow"}
       ]
     }
   }

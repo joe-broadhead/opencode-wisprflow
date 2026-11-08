@@ -97,26 +97,76 @@ See [Scripting](https://github.com/joe-broadhead/opencode-wisprflow/blob/HEAD/do
 
 ## Permissions
 
-The plugin adds these rules to every agent, directly after the agent's base rule that allows everything:
+**Every tool is allowed by default.** An agent can search and read any meeting, transcript, note or calendar entry the
+signed-in account can see, `get_participant_contacts` included, without asking. Nothing in this plugin changes
+Wispr Flow, so the default cannot alter or delete anything there; what it can do is read a lot, and the results are
+other people's words and contact details. Restrict it in any of these three ways:
 
-1. `{ "action": "wisprflow_*", "resource": "*", "effect": "ask" }`: every Wispr Flow tool asks, including tools Wispr
-   Flow adds later.
-2. One `allow` rule for each of the 15 read tools Wispr Flow lists for every account, listed in
-   [`src/wisprflow-tools.ts`](https://github.com/joe-broadhead/opencode-wisprflow/blob/HEAD/src/wisprflow-tools.ts).
-   These run without a prompt.
-3. `{ "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "ask" }`: Wispr Flow lists this tool
-   only for accounts with Wispr Contacts. It returns other people's job titles, companies and LinkedIn profiles, so it
-   asks, although it only reads.
+1. **The `access` option**, which drives the default rules the plugin inserts:
 
-No Wispr Flow tool changes anything. A tool Wispr Flow adds later asks until the plugin knows it. Everything that comes later than these rules still wins: an agent's own stricter rules
-(Explore cannot use Wispr Flow), your `permissions` in `opencode.json`, and your saved "Always allow" answers. To make
-a read ask, add a later rule for it, such as `{ "action": "wisprflow_get_meeting", "resource": "*", "effect": "ask" }`.
-In an unattended run such as `opencode run`, a tool that asks is refused.
+   | Value | What runs | What asks |
+   | --- | --- | --- |
+   | `"all"` (the default) | every tool, and any tool Wispr Flow adds later | nothing |
+   | `"ask-changes"` | the read tools | everything else, new tools included |
+   | `"read-only"` | the read tools | nothing: everything else is **denied** |
+
+   ```json
+   { "plugins": [{ "package": "@joe-broadhead/opencode-wisprflow", "options": { "access": "read-only" } }] }
+   ```
+
+2. **An agent that is read-only or asks**, with rules of its own, later than the plugin's:
+
+   ```json
+   { "agents": { "reader": { "permissions": [
+     { "action": "wisprflow_*", "resource": "*", "effect": "ask" },
+     { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" }
+   ] } } }
+   ```
+
+3. **A rule per tool**, with the exact names in
+   [`src/wisprflow-tools.ts`](https://github.com/joe-broadhead/opencode-wisprflow/blob/HEAD/src/wisprflow-tools.ts). To
+   make one tool ask, or stop it, add a later rule for it:
+
+   ```json
+   { "permissions": [
+     { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "deny" },
+     { "action": "wisprflow_get_meeting", "resource": "*", "effect": "ask" }
+   ] }
+   ```
+
+The plugin inserts this block directly after each agent's base rule that allows everything, generated from
+`defaultRules("all")` in `src/permissions.ts`:
+
+```json
+[
+  { "action": "wisprflow_*", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_calendar_event", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_meeting", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_meeting_by_calendar_id", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_meeting_participants_enriched", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_scratchpad_note", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_upcoming_meeting", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_list_folder_meetings", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_list_folders", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_list_meeting_series", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_list_upcoming_meetings", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_resolve_calendar_link", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_resolve_share_link", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_search_calendar_events", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_search_scratchpad_notes", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "allow" }
+]
+```
+
+Everything later than these rules still wins: an agent's own stricter rules (Explore cannot use Wispr Flow), your
+`permissions` in `opencode.json`, and your saved answers. In an unattended run such as `opencode run`, a tool that asks
+is refused.
 
 Agents that exist only in your own config, and agents added by plugins that load later, are created after the plugin
-adds its rules, so Wispr Flow tools run there without asking. `/wisprflow-status` and `/wisprflow` name those agents
-and show the default rules to put first in each one's own `permissions`. Do not put them in the top-level
-`permissions`, which would loosen Explore.
+adds its rules, so Wispr Flow tools run there under that agent's own rules. `/wisprflow-status` and `/wisprflow` name the
+agents that have no rules of the plugin's and show the default block to put first in each one's own `permissions`. Do
+not put it in the top-level `permissions`, which would loosen Explore.
 [Configuration](https://github.com/joe-broadhead/opencode-wisprflow/blob/HEAD/docs/configuration.md#permissions) has a
 worked example and permission recipes.
 

@@ -1,7 +1,8 @@
 import type { Plugin } from "@opencode/plugin"
 import { DISPLAY_NAME, errorText, SERVER_NAME } from "./constants.js"
 import { reasonOf } from "./redact.js"
-import { ASK_TOOLS, READ_TOOLS } from "./wisprflow-tools.js"
+import type { Access } from "./options.js"
+import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "./wisprflow-tools.js"
 
 export interface Rule {
   readonly action: string
@@ -14,10 +15,18 @@ const actionOf = (tool: string) => `${SERVER_NAME}_${tool}`
 const rule = (tool: string, effect: Rule["effect"]): Rule => ({ action: actionOf(tool), resource: "*", effect })
 
 /**
- * Broad first, narrow last, because the last matching rule wins: every Wispr Flow tool asks, tools Wispr Flow adds
- * later included, then the known reads run without a prompt, and the known tools that ask say so explicitly.
+ * Broad first, narrow last, because the last matching rule wins. Every tool the plugin registers is allowed at `access:
+ * "all"`, and so is one Wispr Flow adds later; `ask-changes` asks for anything that is not a read, and `read-only`
+ * denies it. The reads are always allowed, which is why the first rule alone decides the unknown tools.
  */
-export const defaultRules = (): Rule[] => [rule("*", "ask"), ...READ_TOOLS.map((tool) => rule(tool, "allow")), ...ASK_TOOLS.map((tool) => rule(tool, "ask"))]
+export const defaultRules = (access: Access = "all"): Rule[] => {
+  const other: Rule["effect"] = access === "all" ? "allow" : access === "ask-changes" ? "ask" : "deny"
+  return [
+    rule("*", other),
+    ...[...READ_TOOLS, ...ASK_TOOLS].map((tool) => rule(tool, "allow")),
+    ...WRITE_TOOLS.map((tool) => rule(tool, other)),
+  ]
+}
 
 const same = (a: Rule | undefined, b: Rule) => a?.action === b.action && a.resource === b.resource && a.effect === b.effect
 const BASE_ALLOW: Rule = { action: "*", resource: "*", effect: "allow" }
@@ -27,10 +36,10 @@ const isBaseAllow = (item: Rule) => same(item, BASE_ALLOW)
  * True when the whole default block appears, in order, anywhere after the agent's first base allow: inserted by the
  * plugin or copied by the user. Other plugins insert their blocks at the same index, so it need not follow directly.
  */
-export function hasDefaultRules(permissions: readonly Rule[]) {
+export function hasDefaultRules(permissions: readonly Rule[], access: Access = "all") {
   const base = permissions.findIndex(isBaseAllow)
   if (base === -1) return false
-  const block = defaultRules()
+  const block = defaultRules(access)
   return permissions.some((_, start) => start > base && block.every((item, offset) => same(permissions[start + offset], item)))
 }
 

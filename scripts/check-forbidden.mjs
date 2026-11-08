@@ -28,6 +28,12 @@ const RULES = [
   { id: "permission-hook", pattern: PERMISSION_HOOK, why: "no escalating permission hook; default rules go through ctx.agent.transform", except: TOOLS_RPC },
   { id: "host-source", pattern: /packages\/(?:core|plugin|schema)\/src\b|opencode-[\w-]*-host\b|\bconsumer-host\b/, why: "never reference or import private host source or host checkouts" },
   { id: "absolute-path", pattern: /\/Users\/[^/\s"'`]+\/|\/home\/[^/\s"'`]+\/|\/(?:private\/)?var\/folders\/|(?<![\w.:/-])\/tmp\/|[A-Za-z]:\\\\?Users\\/, why: "machine-local home and temp paths do not belong in the repository; make temp folders with mkdtemp under realpathSync(\"/tmp\"), or use a relative path" },
+  // Shipped text states behaviour, never who decided it or which internal lane changed it.
+  {
+    id: "internal-wording",
+    pattern: /\bowner(?:'s)? (?:decision|ruling)\b|\bthe lead\b|\blane\s+[A-Z]\d*\b|\bhey-jelly\s*#\d+|\bG[1-4] lane\b|\breconcile lane\b/i,
+    why: "internal process wording (a decision's author, a lane, or a ticket of our own) does not belong in shipped docs or code",
+  },
 ]
 
 const findings = []

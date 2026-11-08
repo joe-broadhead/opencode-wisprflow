@@ -15,10 +15,11 @@ describe("Wispr Flow's tools RPC", () => {
   test("every known tool is a method, by exact name, and all of them only read", () => {
     expect(METHODS.map((method) => method.name)).toEqual([...READ_TOOLS, ...ASK_TOOLS, ...WRITE_TOOLS])
     for (const method of METHODS) expect(method).toMatchObject({ kind: "mcp", class: "read" })
+    // Every known tool allows by default, and so does the namespace rule that covers a tool Wispr Flow adds later.
     const allowed = defaultRules().filter((rule) => rule.effect === "allow").map((rule) => rule.action)
-    expect(READ_TOOLS.map((name) => `${SERVER_NAME}_${name}`)).toEqual(allowed)
-    // A read that asks is a method too, and its rule resolves to ask: a script is refused it until an allow exists.
-    expect(defaultRules()).toContainEqual({ action: `wisprflow_${ASK_TOOLS[0]}`, resource: "*", effect: "ask" })
+    expect(allowed).toEqual([`${SERVER_NAME}_*`, ...[...READ_TOOLS, ...ASK_TOOLS, ...WRITE_TOOLS].map((name) => `${SERVER_NAME}_${name}`)])
+    // A read that asks is a method too: a script is refused it only when the user restricts the plugin.
+    expect(defaultRules()).toContainEqual({ action: `wisprflow_${ASK_TOOLS[0]}`, resource: "*", effect: "allow" })
     for (const name of ["shiny_new_tool", "describe", "*"]) expect(METHODS.map((method) => method.name)).not.toContain(name)
   })
 

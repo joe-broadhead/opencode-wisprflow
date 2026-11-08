@@ -22,10 +22,10 @@ describe("the jelly declaration", () => {
     expect(declarationProblems(ROOT, { effectOf: (permission) => evaluate([BASE_ALLOW, ...defaultRules()], permission) })).toEqual([])
   })
 
-  test("declares Wispr Flow's reads as reads that run and its writes as writes that ask, reads first, in list order", () => {
+  test("declares every Wispr Flow tool as allowed, reads first, in list order", () => {
     for (const tool of READ_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
-    // A read that asks is declared as an ask, so Jelly, whose agents never get the plugin's rules, asks too.
-    for (const tool of ASK_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "ask", readOnly: true })
+    // Every tool is allowed by default, so Jelly's declaration allows the reads too, `get_participant_contacts` included.
+    for (const tool of ASK_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
     for (const tool of WRITE_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "ask", readOnly: false })
     expect(jelly.tools.map((tool) => tool.permission)).toEqual([...READ_TOOLS, ...ASK_TOOLS, ...WRITE_TOOLS].map((tool) => `wisprflow_${tool}`))
   })

@@ -3,6 +3,8 @@ name: wisprflow
 description: Load before the first Wispr Flow tool call (wisprflow_*, tools.wisprflow.*). Use when the user names Wispr Flow, Flow or its Notetaker or Scratchpad, or gives a notes.wisprflow.ai link - their recorded meetings (what was said, decided or assigned, transcripts, Flow Summaries, attendees, folders), Scratchpad notes, the calendar Wispr Flow holds, or Wispr Flow sign-in. Also when the user asks Wispr Flow for dictation history, the dictionary, snippets or usage, or to transcribe an audio file, which this connection can't do. Not for Granola or Plaud, or for transcribing audio without Wispr Flow named.
 ---
 
+If Wispr Flow's tools are absent, run `/connect` and choose Wispr Flow, or on Jelly call jelly_connection_request.
+
 # Wispr Flow
 
 Wispr Flow's tools are `wisprflow_<tool>`, or `tools.wisprflow.<tool>(input)` in Code Mode; below they drop the prefix. This skill has the calls and the rules that change answers; Wispr Flow's long tool descriptions, which hold many of those rules, don't reach you unless you `search()`. Search a tool only for a field not covered here. For a brief before a meeting, or a recap of a period, also load `wisprflow-meeting-brief`.

@@ -170,6 +170,12 @@ describe("buildStatus", () => {
     expect(text.match(/Next step/g)).toHaveLength(1)
   })
 
+  test("at ask-changes the Access row lets the personal-data reads run, and says that new tools ask", () => {
+    const row = formatStatus(buildStatus({ ...base, access: "ask-changes" })).split("\n").find((line) => line.startsWith("- Access:"))
+    expect(row).toContain("- Access: reads run without asking, including the personal-data reads; new tools ask first")
+    expect(row).not.toContain("get_participant_contacts")
+  })
+
   test("the rows come in the standard order, with the Skills row between Access and Tools", () => {
     const rows = formatStatus(buildStatus(base)).split("\n").filter((line) => line.startsWith("- ")).map((line) => line.slice(2, line.indexOf(":")))
     expect(rows).toEqual(["Connection", "Account", "Access", "Skills", "Tools", "Agents without default rules", "OpenCode", "Next step"])

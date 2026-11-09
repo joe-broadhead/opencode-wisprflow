@@ -4,7 +4,7 @@ import { isSupportedHost, type HostCheck } from "./host-version.js"
 import { shortReason } from "./redact.js"
 import type { Access } from "./options.js"
 import { defaultRules, unguardedAgents, type Rule } from "./permissions.js"
-import { ASK_TOOLS, classify, WRITE_TOOLS } from "./wisprflow-tools.js"
+import { classify, WRITE_TOOLS } from "./wisprflow-tools.js"
 import { VERSION } from "./version.js"
 
 /** The shared status labels in machine form; `/wisprflow-status` shows them as `sign-in required` and so on. */
@@ -94,8 +94,8 @@ const NOTHING_TO_DO = "Nothing to do."
 const accessText = (access: Access) => {
   if (access === "all") return "every tool runs without asking, reads and new tools included"
   if (access === "read-only") return "reads run without asking; every other tool is denied"
-  const asking = [...ASK_TOOLS, ...(WRITE_TOOLS.length ? ["changes"] : []), "new tools"]
-  return `reads run without asking; ${asking.slice(0, -1).join(", ")}${asking.length > 1 ? " and " : ""}${asking.at(-1)} ask first`
+  const asking = [...(WRITE_TOOLS.length ? ["changes"] : []), "new tools"]
+  return `reads run without asking, including the personal-data reads; ${asking.join(" and ")} ask first`
 }
 
 const TESTED_TEXT = `${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}`

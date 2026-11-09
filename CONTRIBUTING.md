@@ -103,9 +103,8 @@ CI (`.github/workflows/ci.yml`) runs `npm ci --ignore-scripts` and `npm run chec
 
 ## Wispr Flow's tools
 
-`src/wisprflow-tools.ts` lists the Wispr Flow tools the plugin knows: `READ_TOOLS` run without a prompt, `ASK_TOOLS`
-read but ask (`get_participant_contacts`, which returns other people's profiles), and `WRITE_TOOLS`, empty today,
-would ask. `test/unit/wisprflow-catalog.ts` records what OpenCode lists for a signed-in
+`src/wisprflow-tools.ts` lists the Wispr Flow tools the plugin knows: `READ_TOOLS` and `ASK_TOOLS` run without a prompt (`get_participant_contacts` returns other people's profiles, so a user's
+rule may restrict it), and `WRITE_TOOLS`, empty today, would follow the `access` option. `test/unit/wisprflow-catalog.ts` records what OpenCode lists for a signed-in
 `wisprflow` server: each tool's parameters, which are required, and whether its result can hold a transcript, notes or
 a note's text. The tests check the skills' and docs' call examples, and the privacy recipe in
 `docs/configuration.md`, against it. `jelly.tools` in `package.json` declares each tool. Wispr Flow can add, rename or remove
@@ -143,9 +142,9 @@ npm run drift -- <tools.json> --strict
 2. For each name it reports, read the tool's description and schema, and check what it does.
 3. Add a tool to `READ_TOOLS` only if it never changes anything in Wispr Flow and sends nothing to it unasked, because
    reads run without a prompt and each one is also a method of the tools RPC for scripts. Add tools that change
-   anything to `WRITE_TOOLS`, and a read that returns other people's personal data to `ASK_TOOLS`. Give an ask or a
-   write its `effect: "ask"` entry in `jelly.tools`. Leave a tool out if you are not sure: it then asks before every call, and scripts cannot
-   call it.
+   anything to `WRITE_TOOLS`, and a read that returns other people's personal data to `ASK_TOOLS`, which still allows it.
+   Give a write its `effect: "ask"` entry in `jelly.tools`. Leave a tool out if you are not sure: it then follows the
+   `access` option, and scripts cannot call it.
 4. Remove names that Wispr Flow no longer lists for any account.
 5. Update `test/unit/wisprflow-catalog.ts` (parameters, required ones, and whether a result holds a body),
    `jelly.tools` in `package.json`, the skills' tool names and parameters,

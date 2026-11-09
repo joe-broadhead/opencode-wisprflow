@@ -98,7 +98,7 @@ See [Scripting](https://github.com/joe-broadhead/opencode-wisprflow/blob/HEAD/do
 
 ## Permissions
 
-**Every tool is allowed by default.** An agent can search and read any meeting, transcript, note or calendar entry the
+**Every tool is allowed by default.** The `access` option decides whether each tool runs, asks or is denied. At its default, `"all"`, an agent can search and read any meeting, transcript, note or calendar entry the
 signed-in account can see, `get_participant_contacts` included, without asking. Nothing in this plugin changes
 Wispr Flow, so the default cannot alter or delete anything there; what it can do is read a lot, and the results are
 other people's words and contact details. Restrict it in any of these three ways:

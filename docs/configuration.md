@@ -91,7 +91,7 @@ OpenCode keeps the sign-in under the server's name and address, so changing eith
 
 ## Permissions
 
-**Every tool is allowed by default.** OpenCode asserts every MCP call itself, with the action `wisprflow_<tool>` and the
+**Every tool is allowed by default.** The `access` option decides whether each tool runs, asks or is denied. OpenCode asserts every MCP call itself, with the action `wisprflow_<tool>` and the
 resource `*`. The plugin adds the rules for the `access` option to every agent that starts with the base rule
 `{ "action": "*", "resource": "*", "effect": "allow" }`, directly after that rule. The block is generated from
 `defaultRules(access)` in `src/permissions.ts`, and each value's block is printed below in full.

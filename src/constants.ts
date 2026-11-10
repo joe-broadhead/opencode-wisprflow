@@ -23,7 +23,7 @@ export const errorText = (code: PluginCode, message: string, nextStep: string) =
  * Every code this plugin's own code raises. The README's Troubleshooting table names each one, and a test fails when
  * the two differ either way or a code appears here that nothing raises.
  */
-export type PluginCode =
+type PluginCode =
   | "HOST_UNTESTED"
   | "OPTIONS_INVALID"
   | "RULES_NOT_ADDED"
@@ -44,7 +44,7 @@ export const PLUGIN_CODES: readonly PluginCode[] = [
  * The codes the tools RPC shares with every plugin of this family: the ones `docs/scripting.md` documents beside its
  * own. They come from the shared tools RPC module and from OpenCode, not from this plugin's code.
  */
-export type RpcCode =
+type RpcCode =
   | "AUTH_REQUIRED"
   | "CANCELLED"
   | "CONNECTING"

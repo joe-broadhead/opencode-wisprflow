@@ -19,7 +19,7 @@ export type ServerSource =
   | { readonly type: "conflict"; readonly url: string; readonly expected: string }
 
 /** A skill file OpenCode loads in place of one of the plugin's skills, because it uses the same id. */
-export interface ShadowedSkill {
+interface ShadowedSkill {
   /** The plugin's skill. */
   readonly name: string
   /** The file that takes its place. */

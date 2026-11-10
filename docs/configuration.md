@@ -116,6 +116,7 @@ resource `*`. The plugin adds the rules for the `access` option to every agent t
   { "action": "wisprflow_search_calendar_events", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_scratchpad_notes", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_events_list", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "allow" }
 ]
 ```
@@ -140,6 +141,7 @@ resource `*`. The plugin adds the rules for the `access` option to every agent t
   { "action": "wisprflow_search_calendar_events", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_scratchpad_notes", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_events_list", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "allow" }
 ]
 ```
@@ -164,6 +166,7 @@ resource `*`. The plugin adds the rules for the `access` option to every agent t
   { "action": "wisprflow_search_calendar_events", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_scratchpad_notes", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_events_list", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "allow" }
 ]
 ```
@@ -253,6 +256,7 @@ own:
         {"action":"wisprflow_search_calendar_events","resource":"*","effect":"allow"},
         {"action":"wisprflow_search_meetings","resource":"*","effect":"allow"},
         {"action":"wisprflow_search_scratchpad_notes","resource":"*","effect":"allow"},
+        {"action":"wisprflow_events_list","resource":"*","effect":"allow"},
         {"action":"wisprflow_get_participant_contacts","resource":"*","effect":"allow"}
       ]
     }
@@ -274,6 +278,13 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | `SKILLS_INVALID` | Setup: a skill file is missing or broken. The plugin still starts; status shows the problem. | Reinstall the plugin. |
 | `SERVER_NOT_REGISTERED` | Setup: the `wisprflow` server could not be registered. Status shows the problem. | Restart OpenCode. |
 | `RULES_NOT_ADDED` | Setup: the default permission rules could not be added, so Wispr Flow tools may run without asking. Status shows the problem. | Restart OpenCode. |
+| `EVENTS_INVALID_INPUT` | `events_list`: the input breaks the shared contract. | Pass only since, cursor, limit (1 to 500), account and source, as the tool's schema describes. |
+| `EVENTS_CURSOR_INVALID` | `events_list`: the cursor was not issued by Wispr Flow's events_list for this sign-in. | Pass a cursor from a previous result of the same account, or start again with since. |
+| `EVENTS_ACCOUNT_UNKNOWN` | `events_list`: an account other than `default`. | Leave account out, or pass "default". |
+| `EVENTS_SOURCE_UNKNOWN` | `events_list`: a source other than `wisprflow`. | Leave source out, or pass "wisprflow". |
+| `EVENTS_OWNER_UNKNOWN` | `events_list`: OpenCode holds no Wispr Flow sign-in to name as the owner. | Run /connect and choose Wispr Flow to sign in, then call events_list again. |
+| `EVENTS_UNAVAILABLE` | `events_list`: `wisprflow_search_meetings` is not available, because the server is not connected or signed in, or the `wisprflow` name is another server's. | Run /wisprflow-status and follow its next step. |
+| `EVENTS_READ_FAILED` | `events_list`: Wispr Flow's `search_meetings` failed, or capped one week's meetings. The message holds the first line of Wispr Flow's text, cut and redacted. | Call events_list again with the same cursor; if it keeps failing, run /wisprflow-status. |
 
 For example:
 
@@ -284,6 +295,40 @@ OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the defau
 Errors from Wispr Flow's server and from OpenCode pass through unchanged, except in the tools RPC for scripts, whose
 codes are in [Scripting](scripting.md#errors). Wispr Flow's own refusals, such as "Cloud Sync must be enabled to use
 this feature." or "Too many requests", are listed in the README's Troubleshooting.
+
+## Events list
+
+`wisprflow_events_list` (`tools.wisprflow.events_list` in Code Mode, and the tools RPC method `events_list`) is
+Wispr Flow's side of Memory's sources funnel: the shared `events_list` contract, `src/host/events-list.ts`, which
+every source plugin carries unchanged. It lists the meetings Wispr Flow captured since a cursor, as normalised events,
+oldest first. It only reads, never asks and calls no model, so Memory's collector can run it unattended.
+
+```
+events_list({ since?, cursor?, limit?, account?, source? })
+  → { source: "wisprflow", account: "default", owner: { id, label }, events, cursor, more, trust: "untrusted" }
+```
+
+| Input | Meaning |
+| --- | --- |
+| `since` | Where to start without a cursor: an ISO date (a UTC day) or date-time with `Z` or an offset. Default: 24 hours ago. |
+| `cursor` | The previous result's cursor. It wins over `since`. |
+| `limit` | Most events, 1 to 500; 100 by default. A result also stops before 900,000 bytes of JSON. |
+| `account` | `default`, Wispr Flow's one account. |
+| `source` | `wisprflow`, the one source. |
+
+It asserts `wisprflow_events_list`, then reads through OpenCode's own `wisprflow_search_meetings`, whose rule applies
+too: one week at a time, with `since` and `until` as UTC times and `limit: 200`, every page while `has_more`. It
+never reads contacts, transcripts or notes, and never passes `contact_ids`.
+
+Each event is one meeting: kind `meeting`, the meeting id (for `get_meeting`), its start, its title, up to 5
+attendees and a shared meeting's owner as actors (`mailto:` and the email, or `name:` and the name), its
+`share_link`, and the labels `shared` (another person's notes) and `transcript`. A meeting is listed once it started
+2 hours ago, so its notes are most likely done. The cursor is the (start, id) of the last meeting listed: calling again
+with it lists what follows, and an older cursor lists the same meetings again.
+
+Wispr Flow has no tool that names the signed-in account, so the owner is OpenCode's sign-in for the `wisprflow`
+server: `mailto:` and its label when the label is an email, otherwise its credential's id, which a new sign-in
+changes. The cursor holds a digest of the owner, so after a new sign-in an old cursor is refused.
 
 ## Status and RPC
 

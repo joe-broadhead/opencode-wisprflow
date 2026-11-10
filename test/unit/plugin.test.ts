@@ -144,12 +144,12 @@ describe("setup", () => {
     const commands: string[] = []
     command.run({ add: (definition: { name: string }) => commands.push(definition.name) })
     expect(commands).toEqual(["wisprflow-status"])
-    // Code Mode's catalog describes the wisprflow namespace; the plugin adds no tool of its own.
+    // Code Mode's catalog describes the wisprflow namespace; the plugin adds one tool of its own, events_list.
     const namespaces: { name: string; description?: string }[] = []
-    const tools: unknown[] = []
-    tool.run({ namespace: (namespace: { name: string; description?: string }) => void namespaces.push(namespace), add: (info: unknown) => void tools.push(info) } as never)
+    const tools: { name: string; options?: unknown }[] = []
+    tool.run({ namespace: (namespace: { name: string; description?: string }) => void namespaces.push(namespace), add: (info: { name: string; options?: unknown }) => void tools.push(info) } as never)
     expect(namespaces).toEqual([{ name: "wisprflow", description: NAMESPACE_DESCRIPTION }])
-    expect(tools).toEqual([])
+    expect(tools.map((info) => [info.name, info.options])).toEqual([["events_list", { namespace: "wisprflow" }]])
     expect(rpc).toEqual(["wisprflow.meetings", "wisprflow.meetings.tools"])
     // The tools RPC's one hook: it refuses an ask on its own script calls.
     expect(hooks).toEqual(["evaluate"])

@@ -14,6 +14,10 @@ allows it like every other tool, so add a rule if a script should not have it.
 Every Wispr Flow tool only reads, so every method's class is `read`. The class is the worst thing a tool can do; it
 never decides whether a call runs: the rules do.
 
+`events_list` is the plugin's own read, not one of Wispr Flow's: it asserts `wisprflow_events_list`, then reads through
+`wisprflow_search_meetings` as the session, and gives its own `EVENTS_` codes, listed in the
+[configuration guide](configuration.md#errors).
+
 Each method runs the tool with the same input: Wispr Flow's own tool, through OpenCode's own connection and sign-in.
 The plugin never sees the OAuth token. A tool that Wispr Flow adds later is not a method until this plugin classifies
 it, and `describe` lists it under `unclassified`. Every time in a result is UTC.

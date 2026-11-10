@@ -33,6 +33,7 @@ import { Rpc } from "@opencode/plugin/rpc"
 
 // >>> PLUGIN-SPECIFIC >>>
 import { PLUGIN_ID as WISPRFLOW_PLUGIN_ID, SERVER_NAME } from "../constants.js"
+import { EventsFailure } from "../events.js"
 import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../wisprflow-tools.js"
 
 /** The plugin's id. The RPC id is `<PLUGIN_ID>.tools`. */
@@ -76,9 +77,9 @@ export const NEXT_STEPS: NextSteps = {
   CANCELLED: "Call the method again if you still need the result.",
 }
 
-/** The plugin's own errors, thrown by plugin-owned specs, as a code, what happened and the next step. Wispr Flow has none. */
-export function pluginError(_error: unknown): Failure | undefined {
-  return undefined
+/** The plugin's own errors, thrown by plugin-owned specs, as a code, what happened and the next step: events_list's. */
+export function pluginError(error: unknown): Failure | undefined {
+  return error instanceof EventsFailure ? { code: error.code, what: error.what, next: error.next } : undefined
 }
 
 // <<< PLUGIN-SPECIFIC <<<

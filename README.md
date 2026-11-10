@@ -156,6 +156,7 @@ The plugin inserts this block directly after each agent's base rule that allows 
   { "action": "wisprflow_search_calendar_events", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_scratchpad_notes", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_events_list", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "allow" }
 ]
 ```
@@ -239,6 +240,13 @@ Run `/wisprflow-status` first. Its last line is the next step.
 | A Wispr Flow tool is refused in `opencode run` | Nobody could answer its prompt. Add an `allow` rule for that tool. |
 | `/wisprflow` is missing | The plugin did not start. Run `/plugins` to see the error. |
 | `OPTIONS_INVALID` | An option is unknown or has a wrong value. The message names the option and the accepted values. |
+| `EVENTS_INVALID_INPUT` | `events_list`: the input breaks the shared contract. | Pass only since, cursor, limit (1 to 500), account and source, as the tool's schema describes. |
+| `EVENTS_CURSOR_INVALID` | `events_list`: the cursor was not issued by Wispr Flow's events_list for this sign-in. | Pass a cursor from a previous result of the same account, or start again with since. |
+| `EVENTS_ACCOUNT_UNKNOWN` | `events_list`: an account other than `default`. | Leave account out, or pass "default". |
+| `EVENTS_SOURCE_UNKNOWN` | `events_list`: a source other than `wisprflow`. | Leave source out, or pass "wisprflow". |
+| `EVENTS_OWNER_UNKNOWN` | `events_list`: OpenCode holds no Wispr Flow sign-in to name as the owner. | Run /connect and choose Wispr Flow to sign in, then call events_list again. |
+| `EVENTS_UNAVAILABLE` | `events_list`: `wisprflow_search_meetings` is not available, because the server is not connected or signed in, or the `wisprflow` name is another server's. | Run /wisprflow-status and follow its next step. |
+| `EVENTS_READ_FAILED` | `events_list`: Wispr Flow's `search_meetings` failed, or capped one week's meetings. The message holds the first line of Wispr Flow's text, cut and redacted. | Call events_list again with the same cursor; if it keeps failing, run /wisprflow-status. |
 | `HOST_UNTESTED` | Your OpenCode is outside `>=2.2.3 <2.3.0`, so the plugin did not start. Use OpenCode `>=2.2.3 <2.3.0`, or set `"allowUntestedHost": true` to run anyway. |
 | `STATUS_UNAVAILABLE` | The status could not be read, or the plugin is not running. Follow the next step in the message. |
 | `SKILLS_INVALID` | A skill file in the package is missing or broken. Reinstall the plugin. |

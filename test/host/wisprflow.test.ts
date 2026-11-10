@@ -467,4 +467,23 @@ describe("the /connect entry", () => {
     await Bun.sleep(1000)
     expect((await entry())?.name).toBe("Wispr Flow")
   })
+
+  test("events_list is a tools RPC method beside the known reads, run as the session, with its own codes", async () => {
+    const build = await session(host)
+    const call = async (method: string, input: unknown) => {
+      try {
+        return { value: (await host.client.rpc.call({ rpcID: "wisprflow.meetings.tools", method, input: input as never, location: host.location })).output as Record<string, any> }
+      } catch (error) {
+        const e = error as { type?: string; data?: { code?: string } }
+        return { type: e.type, code: e.data?.code }
+      }
+    }
+    const described = await call("describe", {})
+    expect(described.value?.methods.at(-1)).toMatchObject({ name: "events_list", kind: "plugin", action: "wisprflow_events_list" })
+    // This host signs in to the fake with no credential, so there is no sign-in to name as the owner.
+    const before = host.fake.calls.length
+    expect(await call("events_list", { sessionID: build, input: { since: "2026-10-01" } })).toEqual({ type: "failed", code: "EVENTS_OWNER_UNKNOWN" })
+    expect(await call("events_list", { sessionID: build, input: { cursor: "not-a-cursor" } })).toEqual({ type: "failed", code: "EVENTS_CURSOR_INVALID" })
+    expect(host.fake.calls.slice(before)).toEqual([])
+  })
 })

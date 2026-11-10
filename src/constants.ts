@@ -23,7 +23,14 @@ export const errorText = (code: PluginCode, message: string, nextStep: string) =
  * Every code this plugin's own code raises. The README's Troubleshooting table names each one, and a test fails when
  * the two differ either way or a code appears here that nothing raises.
  */
-type PluginCode =
+export type PluginCode =
+  | "EVENTS_ACCOUNT_UNKNOWN"
+  | "EVENTS_CURSOR_INVALID"
+  | "EVENTS_INVALID_INPUT"
+  | "EVENTS_OWNER_UNKNOWN"
+  | "EVENTS_READ_FAILED"
+  | "EVENTS_SOURCE_UNKNOWN"
+  | "EVENTS_UNAVAILABLE"
   | "HOST_UNTESTED"
   | "OPTIONS_INVALID"
   | "RULES_NOT_ADDED"
@@ -32,6 +39,13 @@ type PluginCode =
   | "STATUS_UNAVAILABLE"
 
 export const PLUGIN_CODES: readonly PluginCode[] = [
+  "EVENTS_ACCOUNT_UNKNOWN",
+  "EVENTS_CURSOR_INVALID",
+  "EVENTS_INVALID_INPUT",
+  "EVENTS_OWNER_UNKNOWN",
+  "EVENTS_READ_FAILED",
+  "EVENTS_SOURCE_UNKNOWN",
+  "EVENTS_UNAVAILABLE",
   "HOST_UNTESTED",
   "OPTIONS_INVALID",
   "RULES_NOT_ADDED",

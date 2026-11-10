@@ -321,8 +321,9 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
   test("describes every known tool, each a read and available with its live schema", async () => {
     const { value } = await script("describe", {})
     expect(value.id).toBe(TOOLS_RPC_ID)
-    expect(value.methods.map((method: { name: string }) => method.name)).toEqual(METHODS.map((method) => method.name))
-    for (const method of value.methods) {
+    expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...METHODS.map((method) => method.name), "events_list"])
+    expect(value.methods.at(-1)).toMatchObject({ name: "events_list", kind: "plugin", action: "wisprflow_events_list", available: true })
+    for (const method of value.methods.slice(0, -1)) {
       expect({ name: method.name, kind: method.kind, class: method.class, action: method.action, available: method.available }).toEqual({
         name: method.name,
         kind: "mcp",

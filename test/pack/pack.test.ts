@@ -337,9 +337,11 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
 
   test("describe with a session reports each method's permission: every tool allows by default", async () => {
     const { value } = await script("describe", { sessionID: sessions.build })
-    expect(Object.fromEntries(value.methods.map((method: { name: string; permission: string }) => [method.name, method.permission]))).toEqual(
-      Object.fromEntries(METHODS.map((method) => [method.name, "allow"])),
-    )
+    // METHODS are the known tools; the plugin's own events_list is a read the default rules allow too.
+    expect(Object.fromEntries(value.methods.map((method: { name: string; permission: string }) => [method.name, method.permission]))).toEqual({
+      ...Object.fromEntries(METHODS.map((method) => [method.name, "allow"])),
+      events_list: "allow",
+    })
   })
 
   test("runs a known read as the session's agent, with no model turn", async () => {

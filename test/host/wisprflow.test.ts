@@ -67,7 +67,8 @@ const hidden = (rules: readonly Rule[], action: string) => {
 /** The host lists an MCP server's tools shortly after it connects. */
 const wisprflowTools = (host: Host) =>
   until("Wispr Flow's tools are registered", async () => {
-    const ids = (await host.probe().tool.list()).map((tool) => tool.id).filter((id) => id.startsWith("wisprflow_"))
+    // The plugin's own events_list is a wisprflow_ tool too; SERVED is the server's tools, so it is left out.
+    const ids = (await host.probe().tool.list()).map((tool) => tool.id).filter((id) => id.startsWith("wisprflow_") && id !== "wisprflow_events_list")
     return ids.length === SERVED.length && ids.sort()
   })
 

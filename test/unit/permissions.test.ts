@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { defaultRules, evaluate, hasDefaultRules, insertRules, registerDefaultRules, unguardedAgents, type Rule } from "../../src/permissions.js"
-import { ASK_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { PERSONAL_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 import { agentEditor, allow, builtInAgents, transforms, type AgentEditor, type FakeAgent } from "./fake.js"
 
 const [READ_A, READ_B] = READ_TOOLS as [string, string]
@@ -15,7 +15,7 @@ describe("defaultRules", () => {
     const rules = defaultRules()
     expect(rules[0]).toEqual({ action: "wisprflow_*", resource: "*", effect: "allow" })
     expect(rules.slice(1)).toEqual([
-      ...[...READ_TOOLS, ...PLUGIN_READS, ...ASK_TOOLS].map((tool): Rule => ({ action: `wisprflow_${tool}`, resource: "*", effect: "allow" })),
+      ...[...READ_TOOLS, ...PLUGIN_READS, ...PERSONAL_TOOLS].map((tool): Rule => ({ action: `wisprflow_${tool}`, resource: "*", effect: "allow" })),
       ...WRITE_TOOLS.map((tool): Rule => ({ action: `wisprflow_${tool}`, resource: "*", effect: "allow" })),
     ])
     expect(rules.filter((rule) => rule.effect !== "allow")).toEqual([])
@@ -26,14 +26,14 @@ describe("defaultRules", () => {
     const rules = defaultRules("ask-changes")
     expect(rules[0]).toEqual(ask)
     expect(effects([allow("*"), ...rules])).toEqual(["allow", "allow", "ask", "ask"])
-    for (const tool of ASK_TOOLS) expect(evaluate([allow("*"), ...rules], `wisprflow_${tool}`)).toBe("allow")
+    for (const tool of PERSONAL_TOOLS) expect(evaluate([allow("*"), ...rules], `wisprflow_${tool}`)).toBe("allow")
   })
 
   test("read-only allows reads and denies everything else, new tools included", () => {
     const rules = defaultRules("read-only")
     expect(rules[0]).toEqual(denyAll)
     expect(effects([allow("*"), ...rules])).toEqual(["allow", "allow", "deny", "deny"])
-    for (const tool of ASK_TOOLS) expect(evaluate([allow("*"), ...rules], `wisprflow_${tool}`)).toBe("allow")
+    for (const tool of PERSONAL_TOOLS) expect(evaluate([allow("*"), ...rules], `wisprflow_${tool}`)).toBe("allow")
   })
 
   test("a user's later rule still wins, whichever access the block came from", () => {

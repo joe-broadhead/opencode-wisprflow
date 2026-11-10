@@ -5,7 +5,7 @@
 // <tools.json> is a saved tool list: a JSON object whose `tools` array holds each tool's `name`, `description` and
 // `inputSchema`, and its `annotations` when the source has them, as `ctx.tool.list()` in OpenCode or an MCP client's
 // `tools/list` gives them. CONTRIBUTING says how to save one. The script reads that file only: it never reads a
-// credential and never calls Wispr Flow. It compares the list with READ_TOOLS, ASK_TOOLS and WRITE_TOOLS in
+// credential and never calls Wispr Flow. It compares the list with READ_TOOLS, PERSONAL_TOOLS and WRITE_TOOLS in
 // src/wisprflow-tools.ts and with the parameters recorded in test/unit/wisprflow-catalog.ts, and prints only tool
 // names, parameter names and Wispr Flow's readOnlyHint and destructiveHint annotations.
 // Exit codes: 0 no drift, or drift without --strict; 1 drift with --strict; 2 usage or file error.
@@ -30,7 +30,7 @@ const classified = await loadClassification()
 const catalog = await loadCatalog()
 const live = readToolList(file)
 
-const known = new Set([...classified.read, ...classified.ask, ...classified.write])
+const known = new Set([...classified.read, ...classified.personal, ...classified.write])
 const added = [...live.keys()].filter((name) => !known.has(name)).sort()
 // A tool Wispr Flow lists only for some accounts is expected to be missing from one account's list.
 const absent = [...known].filter((name) => !live.has(name))
@@ -39,12 +39,12 @@ const conditional = absent.filter((name) => catalog[name]?.conditional).sort()
 const annotated = [...live.values()].some((tool) => tool.annotations !== undefined)
 const reclassified = [...live]
   .filter(([name, { annotations: hints = {} }]) =>
-    ((classified.read.has(name) || classified.ask.has(name)) && (hints.readOnlyHint === false || hints.destructiveHint === true))
+    ((classified.read.has(name) || classified.personal.has(name)) && (hints.readOnlyHint === false || hints.destructiveHint === true))
     || (classified.write.has(name) && hints.readOnlyHint === true))
   .map(([name]) => name)
   .sort()
 const changeWording = [...live]
-  .filter(([name, tool]) => (classified.read.has(name) || classified.ask.has(name)) && CHANGE_WORDS.test(tool.description))
+  .filter(([name, tool]) => (classified.read.has(name) || classified.personal.has(name)) && CHANGE_WORDS.test(tool.description))
   .map(([name, tool]) => `${name}  (${tool.description.match(CHANGE_WORDS)[0]})`)
   .sort()
 const parameters = [...live]
@@ -59,7 +59,7 @@ const parameters = [...live]
   .sort()
 
 const count = (set) => [...live.keys()].filter((name) => set.has(name)).length
-console.log(`The list holds ${live.size} tools: ${count(classified.read)} classified read, ${count(classified.ask)} classified ask, `
+console.log(`The list holds ${live.size} tools: ${count(classified.read)} classified read, ${count(classified.personal)} classified personal, `
   + `${count(classified.write)} classified write, ${added.length} unclassified.`)
 section("Added: listed by Wispr Flow, in no list of src/wisprflow-tools.ts", added, true)
 section("Removed: in src/wisprflow-tools.ts, not in this list (an account may list fewer tools than the server has)", removed, false)
@@ -124,7 +124,7 @@ async function loadClassification() {
     if (!Array.isArray(value)) fail(`src/wisprflow-tools.ts must export ${name} as an array of tool names.`)
     return new Set(value)
   }
-  return { read: list("READ_TOOLS"), ask: list("ASK_TOOLS"), write: list("WRITE_TOOLS") }
+  return { read: list("READ_TOOLS"), personal: list("PERSONAL_TOOLS"), write: list("WRITE_TOOLS") }
 }
 
 async function loadCatalog() {

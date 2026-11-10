@@ -40,7 +40,7 @@ the checks and the release steps.
   `unavailable`, with a next step.
 - **`src/wisprflow-tools.ts` is the one place that classifies Wispr Flow's tools,** and it and `src/constants.ts` have
   no runtime imports: the drift script and `scripts/check.mjs` load them with Node's type stripping. The default
-  rules, the tools RPC's methods, status and the tests derive from it. `READ_TOOLS` and `ASK_TOOLS` run without a prompt (`ASK_TOOLS` return other people's personal data, so a user's rule may restrict them); every list is a tools RPC method, with
+  rules, the tools RPC's methods, status and the tests derive from it. `READ_TOOLS` and `PERSONAL_TOOLS` run without a prompt (`PERSONAL_TOOLS` return other people's personal data, so a user's rule may restrict them); every list is a tools RPC method, with
   its class. Together they are exactly the tools in `test/unit/wisprflow-catalog.ts`.
 - **The `jelly` section** of `package.json` declares every known tool, the skills, the sign-in, a one-line `summary`
   and the `icon`. Jelly's declaration schema drops a top-level key it does not know, and its nested entries accept only
@@ -54,7 +54,7 @@ the checks and the release steps.
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
 - **The tools RPC.** `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block
   between the `PLUGIN-SPECIFIC` markers here; change the rest in the shared copy first. Its methods are every name in
-  `READ_TOOLS`, `ASK_TOOLS` and `WRITE_TOOLS`, each with its class; a tool Wispr Flow adds later is never a method.
+  `READ_TOOLS`, `PERSONAL_TOOLS` and `WRITE_TOOLS`, each with its class; a tool Wispr Flow adds later is never a method.
   Every call resolves the rule before dispatch: only an `allow` runs, so `get_participant_contacts` needs one. Keep the
   RPC id `wisprflow.meetings.tools` and its method names stable: scripts call them by name. `docs/scripting.md` is the
   contract, and `test/unit/scripting-docs.test.ts` parses every example in it and in the README.

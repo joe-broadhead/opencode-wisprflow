@@ -19,7 +19,7 @@ import { ENDPOINT, SUPPORTED_HOST, TESTED_HOSTS } from "../../src/constants.js"
 import { METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { defaultRules, type Rule } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
-import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { PERSONAL_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 import { NEW_TOOL, startFakeMcp, UPSTREAM_FAILURE, type FakeMcp } from "../host/fake-mcp.js"
 
 const root = fileURLToPath(new URL("../..", import.meta.url))
@@ -296,7 +296,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
       agents: { locked: { permissions: [rule("wisprflow_*", "deny")] }, careful: { permissions: [rule(`wisprflow_${READ_A}`, "ask")] } },
     })
     // Every known tool, and the fake's new one.
-    const tools = READ_TOOLS.length + ASK_TOOLS.length + WRITE_TOOLS.length + 1
+    const tools = READ_TOOLS.length + PERSONAL_TOOLS.length + WRITE_TOOLS.length + 1
     await host.until(`wisprflow is connected with its ${tools} tools`, async () => {
       const { output } = await host.api<{ output: { state: string; tools: number; unknownCount: number } }>("POST", "/api/rpc/wisprflow.meetings/status", { input: {} })
       return output.state === "connected" && output.tools === tools && output.unknownCount === 1

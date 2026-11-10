@@ -5,7 +5,7 @@ import { defaultRules } from "../../src/permissions.js"
 import { shortReason } from "../../src/redact.js"
 import { buildStatus, formatStatus, readStatus, registerStatusCommand, registerStatusRpc, StatusRpc, type Status, type StatusContext, type StatusFacts } from "../../src/status.js"
 import { VERSION } from "../../src/version.js"
-import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { PERSONAL_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 import { allow } from "./fake.js"
 
 const SIGN_IN = "Run /connect and choose Wispr Flow, then press o or Enter to open the link (in a terminal, opencode mcp auth wisprflow opens it automatically)."
@@ -114,11 +114,11 @@ describe("buildStatus", () => {
   })
 
   test("counts the visible tools and names the unknown ones; known writes are not unknown", () => {
-    const status = buildStatus({ ...base, tools: [READ, ...ASK_TOOLS, ...WRITE_TOOLS, "shiny_new_tool", "get_dictation_history"] })
-    expect(status.tools).toBe(3 + ASK_TOOLS.length + WRITE_TOOLS.length)
+    const status = buildStatus({ ...base, tools: [READ, ...PERSONAL_TOOLS, ...WRITE_TOOLS, "shiny_new_tool", "get_dictation_history"] })
+    expect(status.tools).toBe(3 + PERSONAL_TOOLS.length + WRITE_TOOLS.length)
     expect(status.unknownCount).toBe(2)
     expect(status.unknownTools).toEqual(["shiny_new_tool", "get_dictation_history"])
-    expect(formatStatus(status)).toContain(`- Tools: ${3 + ASK_TOOLS.length + WRITE_TOOLS.length} available, 2 unknown: shiny_new_tool, get_dictation_history (new tools run too)`)
+    expect(formatStatus(status)).toContain(`- Tools: ${3 + PERSONAL_TOOLS.length + WRITE_TOOLS.length} available, 2 unknown: shiny_new_tool, get_dictation_history (new tools run too)`)
   })
 
   test("names unknown tools in any case, and with dashes: the characters OpenCode keeps in a permission action", () => {

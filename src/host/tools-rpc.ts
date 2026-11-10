@@ -34,7 +34,7 @@ import { Rpc } from "@opencode/plugin/rpc"
 // >>> PLUGIN-SPECIFIC >>>
 import { PLUGIN_ID as WISPRFLOW_PLUGIN_ID, SERVER_NAME } from "../constants.js"
 import { EventsFailure } from "../events.js"
-import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../wisprflow-tools.js"
+import { PERSONAL_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../wisprflow-tools.js"
 
 /** The plugin's id. The RPC id is `<PLUGIN_ID>.tools`. */
 export const PLUGIN_ID = WISPRFLOW_PLUGIN_ID
@@ -45,7 +45,7 @@ export const PLUGIN_ID = WISPRFLOW_PLUGIN_ID
  * tool, so a script calls it unless the user restricts it. An allowlist: a tool the server adds later is not a method
  * until it is classified in `src/wisprflow-tools.ts`, and `describe` lists it as unclassified.
  */
-export const METHODS: readonly MethodSpec[] = [...READ_TOOLS, ...ASK_TOOLS, ...WRITE_TOOLS].map((name): MethodSpec => ({
+export const METHODS: readonly MethodSpec[] = [...READ_TOOLS, ...PERSONAL_TOOLS, ...WRITE_TOOLS].map((name): MethodSpec => ({
   kind: "mcp",
   name,
   class: "read",

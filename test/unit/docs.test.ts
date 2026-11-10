@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { ASK_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { PERSONAL_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 import { TESTED_HOSTS } from "../../src/constants.js"
 import { defaultRules } from "../../src/permissions.js"
 import { LIVE } from "./wisprflow-catalog.js"
@@ -25,7 +25,7 @@ describe("docs", () => {
 
   test.each(FILES)("%s names only Wispr Flow tools the plugin knows", (file) => {
     const named = [...text(file).matchAll(/\bwisprflow_([a-z][a-z_]*)(?![\w*])/g)].map((match) => match[1]!)
-    expect(named.filter((tool) => ![...READ_TOOLS, ...PLUGIN_READS, ...ASK_TOOLS, ...WRITE_TOOLS].includes(tool))).toEqual([])
+    expect(named.filter((tool) => ![...READ_TOOLS, ...PLUGIN_READS, ...PERSONAL_TOOLS, ...WRITE_TOOLS].includes(tool))).toEqual([])
   })
 
   // S5: version numbers live in package.json and the CHANGELOG heading only, and nothing says the package is unreleased.
@@ -104,7 +104,7 @@ describe("docs", () => {
 
   test("the scripting guide lists every known tool as a method", () => {
     const guide = text("docs/scripting.md")
-    for (const name of [...READ_TOOLS, ...ASK_TOOLS]) expect(guide).toContain(`\`${name}\``)
+    for (const name of [...READ_TOOLS, ...PERSONAL_TOOLS]) expect(guide).toContain(`\`${name}\``)
     expect(guide).toContain("`describe`")
     expect(guide).toContain("x-opencode-directory")
   })

@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test"
 import { PLUGIN_ID as WISPRFLOW_PLUGIN_ID, SERVER_NAME } from "../../src/constants.js"
 import { METHODS, NEXT_STEPS, PLUGIN_ID, shapeInput, shapeResult, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { defaultRules } from "../../src/permissions.js"
-import { ASK_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { PERSONAL_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 
 describe("Wispr Flow's tools RPC", () => {
   test("is wisprflow.meetings.tools, under the plugin's own id", () => {
@@ -13,13 +13,13 @@ describe("Wispr Flow's tools RPC", () => {
   })
 
   test("every known tool is a method, by exact name, and all of them only read", () => {
-    expect(METHODS.map((method) => method.name)).toEqual([...READ_TOOLS, ...ASK_TOOLS, ...WRITE_TOOLS])
+    expect(METHODS.map((method) => method.name)).toEqual([...READ_TOOLS, ...PERSONAL_TOOLS, ...WRITE_TOOLS])
     for (const method of METHODS) expect(method).toMatchObject({ kind: "mcp", class: "read" })
     // Every known tool allows by default, and so does the namespace rule that covers a tool Wispr Flow adds later.
     const allowed = defaultRules().filter((rule) => rule.effect === "allow").map((rule) => rule.action)
-    expect(allowed).toEqual([`${SERVER_NAME}_*`, ...[...READ_TOOLS, ...PLUGIN_READS, ...ASK_TOOLS, ...WRITE_TOOLS].map((name) => `${SERVER_NAME}_${name}`)])
+    expect(allowed).toEqual([`${SERVER_NAME}_*`, ...[...READ_TOOLS, ...PLUGIN_READS, ...PERSONAL_TOOLS, ...WRITE_TOOLS].map((name) => `${SERVER_NAME}_${name}`)])
     // A read that asks is a method too: a script is refused it only when the user restricts the plugin.
-    expect(defaultRules()).toContainEqual({ action: `wisprflow_${ASK_TOOLS[0]}`, resource: "*", effect: "allow" })
+    expect(defaultRules()).toContainEqual({ action: `wisprflow_${PERSONAL_TOOLS[0]}`, resource: "*", effect: "allow" })
     for (const name of ["shiny_new_tool", "describe", "*"]) expect(METHODS.map((method) => method.name)).not.toContain(name)
   })
 

@@ -14,7 +14,7 @@ no tool of its own and has no runtime dependencies.
 | `src/integration.ts` | The `/connect` entry: its name "Wispr Flow", and the sign-in problem on its account |
 | `src/options.ts` | Option parsing and validation |
 | `src/host-version.ts` | The host check: the supported range, and the tested releases |
-| `src/wisprflow-tools.ts` | `READ_TOOLS`, `ASK_TOOLS`, `WRITE_TOOLS` and `classify()`: the one place that classifies Wispr Flow's tools. No runtime imports, so the drift script can load it |
+| `src/wisprflow-tools.ts` | `READ_TOOLS`, `PERSONAL_TOOLS`, `WRITE_TOOLS` and `classify()`: the one place that classifies Wispr Flow's tools. No runtime imports, so the drift script can load it |
 | `src/permissions.ts` | The default rules, their placement, and detection of agents without them |
 | `src/status.ts` | The status model and text, `/wisprflow-status`, and the status RPC method |
 | `src/skills.ts` | Loading and registering the skills |
@@ -89,7 +89,7 @@ query.
 ## Tools RPC
 
 `wisprflow.meetings.tools` lets a script call every known tool with no model; [Scripting](scripting.md) is the user's
-view. Its methods are `describe` and one per name in `READ_TOOLS`, `ASK_TOOLS` and `WRITE_TOOLS`, named after the
+view. Its methods are `describe` and one per name in `READ_TOOLS`, `PERSONAL_TOOLS` and `WRITE_TOOLS`, named after the
 upstream tool and carrying a tools RPC class (every Wispr Flow tool is `read`). It is an allowlist: a tool that Wispr
 Flow adds later is not a method until it is classified, and `describe` lists it as unclassified. `describe` reports
 each method as available or not from what OpenCode lists now.

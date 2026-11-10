@@ -171,7 +171,7 @@ resource `*`. The plugin adds the rules for the `access` option to every agent t
 ]
 ```
 
-`READ_TOOLS` in `src/wisprflow-tools.ts` lists the 15 read tools Wispr Flow lists for every account. `ASK_TOOLS` lists
+`READ_TOOLS` in `src/wisprflow-tools.ts` lists the 15 read tools Wispr Flow lists for every account. `PERSONAL_TOOLS` lists
 `get_participant_contacts`, which Wispr Flow lists only for accounts with Wispr Contacts: it returns other people's job
 titles, companies and LinkedIn profiles, and it is a read, so it is allowed at every `access` value; add a later `ask`
 or `deny` rule for it if that is too much. No Wispr Flow tool changes anything. Under `ask-changes` a tool Wispr Flow

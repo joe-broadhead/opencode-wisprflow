@@ -5,7 +5,7 @@ the OpenCode server. It uses the tools RPC, `wisprflow.meetings.tools`, through 
 
 | Class | Methods |
 | --- | --- |
-| read | the 15 read tools the default rules allow (`READ_TOOLS` in `src/wisprflow-tools.ts`) and `get_participant_contacts` (`ASK_TOOLS`), which returns other people's job titles, companies and LinkedIn profiles and is allowed by the same block: `get_calendar_event`, `get_meeting`, `get_meeting_by_calendar_id`, `get_meeting_participants_enriched`, `get_participant_contacts`, `get_scratchpad_note`, `get_upcoming_meeting`, `list_folder_meetings`, `list_folders`, `list_meeting_series`, `list_upcoming_meetings`, `resolve_calendar_link`, `resolve_share_link`, `search_calendar_events`, `search_meetings` and `search_scratchpad_notes` |
+| read | the 15 read tools the default rules allow (`READ_TOOLS` in `src/wisprflow-tools.ts`) and `get_participant_contacts` (`PERSONAL_TOOLS`), which returns other people's job titles, companies and LinkedIn profiles and is allowed by the same block: `get_calendar_event`, `get_meeting`, `get_meeting_by_calendar_id`, `get_meeting_participants_enriched`, `get_participant_contacts`, `get_scratchpad_note`, `get_upcoming_meeting`, `list_folder_meetings`, `list_folders`, `list_meeting_series`, `list_upcoming_meetings`, `resolve_calendar_link`, `resolve_share_link`, `search_calendar_events`, `search_meetings` and `search_scratchpad_notes` |
 | `describe` | not a tool: lists the methods, their classes and permission actions, whether OpenCode lists each tool now, each tool's input as JSON Schema, and — with a session — that session's permission for each |
 
 `get_participant_contacts` returns other people's job titles, companies and LinkedIn profiles. The default `access`

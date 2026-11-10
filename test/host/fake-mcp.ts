@@ -10,7 +10,7 @@
 // accepts a client metadata document, so a host test can complete OpenCode's sign-in.
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
 import type { AddressInfo } from "node:net"
-import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { PERSONAL_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 
 const schema = { type: "object", properties: { query: { type: "string" } } }
 /** A tool the plugin has never seen. */
@@ -24,7 +24,7 @@ const TOOLS = [
   NEW_TOOL,
 ].map((tool) => ({ ...tool, inputSchema: { type: "object", properties: {} } }))
 const knownTool = (name: string, readOnlyHint: boolean) => ({ name, description: `Wispr Flow ${name}`, annotations: { readOnlyHint }, inputSchema: schema })
-const CATALOG = [...READ_TOOLS.map((name) => knownTool(name, true)), ...ASK_TOOLS.map((name) => knownTool(name, true)), ...WRITE_TOOLS.map((name) => knownTool(name, false)), { ...NEW_TOOL, inputSchema: schema }]
+const CATALOG = [...READ_TOOLS.map((name) => knownTool(name, true)), ...PERSONAL_TOOLS.map((name) => knownTool(name, true)), ...WRITE_TOOLS.map((name) => knownTool(name, false)), { ...NEW_TOOL, inputSchema: schema }]
 
 /** The upstream error a "fail" query gets: two lines, the first with a signed URL. */
 export const UPSTREAM_FAILURE = "Wispr Flow refused https://files.wisprflow.example/a.png?signature=fake-signature-123 for this input\nTraceback: second line"

@@ -6,13 +6,13 @@ import { join } from "node:path"
 import { parseSkill, SKILL_NAMES, SKILLS_DIR } from "../../src/skills.js"
 import { checkHost } from "../../src/host-version.js"
 import { buildStatus, formatStatus } from "../../src/status.js"
-import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { PERSONAL_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 
 const NAMES = [...SKILL_NAMES]
 const MAX_LINES = 100
 // Words from the plugin's own process that mean nothing to the model or the user.
 const JARGON = /manifest|attest|quarantin|evidence|acceptance|harness|fixture|\bfork\b|dispatch|lease|catalog|allowlist|reviewed|capabilit|provisional|\bWS-[A-Z0-9]|PLAN\.md|drift|\bTODO\b/i
-const KNOWN = [...READ_TOOLS, ...ASK_TOOLS, ...WRITE_TOOLS]
+const KNOWN = [...READ_TOOLS, ...PERSONAL_TOOLS, ...WRITE_TOOLS]
 // A Wispr Flow tool name written bare, as the skills do after dropping the prefix.
 const TOOL_SHAPED = /`((?:get|list|search|resolve|add|update|delete|create)_[a-z_]+)`/g
 

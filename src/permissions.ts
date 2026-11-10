@@ -2,7 +2,7 @@ import type { Plugin } from "@opencode/plugin"
 import { DISPLAY_NAME, errorText, SERVER_NAME } from "./constants.js"
 import { reasonOf } from "./redact.js"
 import type { Access } from "./options.js"
-import { ASK_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "./wisprflow-tools.js"
+import { PERSONAL_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "./wisprflow-tools.js"
 
 export interface Rule {
   readonly action: string
@@ -23,7 +23,7 @@ export const defaultRules = (access: Access = "all"): Rule[] => {
   const other: Rule["effect"] = access === "all" ? "allow" : access === "ask-changes" ? "ask" : "deny"
   return [
     rule("*", other),
-    ...[...READ_TOOLS, ...PLUGIN_READS, ...ASK_TOOLS].map((tool) => rule(tool, "allow")),
+    ...[...READ_TOOLS, ...PLUGIN_READS, ...PERSONAL_TOOLS].map((tool) => rule(tool, "allow")),
     ...WRITE_TOOLS.map((tool) => rule(tool, other)),
   ]
 }

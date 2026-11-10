@@ -60,6 +60,9 @@ export interface HostInput {
 
 let hosts = 0
 
+/** How long a host may take to be ready: the 60 s default is too short on a busy machine (WF-03). A test has 180 s. */
+const READY_TIMEOUT_MS = 120_000
+
 export async function startHost(input: HostInput = {}) {
   const base = join(root, `host-${++hosts}`)
   const work = join(base, "work")
@@ -88,6 +91,8 @@ export async function startHost(input: HostInput = {}) {
     log: { level: "error" },
   })
   const location = { directory: work }
+  // The last state the readiness check saw, so a timeout says what was still pending.
+  let seen = "nothing yet"
   const host = {
     client,
     location,
@@ -109,11 +114,12 @@ export async function startHost(input: HostInput = {}) {
       const state = plugins.find((plugin) => plugin.id === wisprflow.id)?.state
       if (state?.status === "failed") throw new Error(`the Wispr Flow plugin failed: ${state.error}`)
       const { data: servers } = await client.mcp.list({ location })
+      seen = `plugin ${state?.status ?? "not listed"}, servers ${servers.map((server) => server.status.status).join(", ") || "none"}, probe ${probes.has(work) ? "loaded" : "not loaded"}`
       return state?.status === "active" && servers.some((server) => server.status.status !== "pending") && probes.has(work)
-    })
+    }, READY_TIMEOUT_MS)
   } catch (error) {
     await host.close().catch(() => {})
-    throw error
+    throw new Error(`${error instanceof Error ? error.message : String(error)} Last seen: ${seen}.`, { cause: error })
   }
   return host
 }

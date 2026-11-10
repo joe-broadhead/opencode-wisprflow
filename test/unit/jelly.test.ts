@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { DISPLAY_NAME, SERVER_NAME } from "../../src/constants.js"
 import { parseOptions } from "../../src/options.js"
 import { defaultRules, evaluate, type Rule } from "../../src/permissions.js"
-import { ASK_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { PERSONAL_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 import { type Declaration, type DeclaredTool, declarationProblems, docProblems, readPackage } from "../support/jelly-kit.js"
 
 /**
@@ -26,11 +26,11 @@ describe("the jelly declaration", () => {
   test("declares every Wispr Flow tool as allowed, reads first, in list order", () => {
     for (const tool of READ_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
     // Every tool is allowed by default, so Jelly's declaration allows the reads too, `get_participant_contacts` included.
-    for (const tool of ASK_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
+    for (const tool of PERSONAL_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
     for (const tool of WRITE_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "ask", readOnly: false })
     // The plugin's own read, events_list, is declared after Wispr Flow's reads.
     for (const tool of PLUGIN_READS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
-    expect(jelly.tools.map((tool) => tool.permission)).toEqual([...READ_TOOLS, ...PLUGIN_READS, ...ASK_TOOLS, ...WRITE_TOOLS].map((tool) => `wisprflow_${tool}`))
+    expect(jelly.tools.map((tool) => tool.permission)).toEqual([...READ_TOOLS, ...PLUGIN_READS, ...PERSONAL_TOOLS, ...WRITE_TOOLS].map((tool) => `wisprflow_${tool}`))
   })
 
 

@@ -27,7 +27,7 @@ import {
   // @ts-expect-error Failure is not exported
   type Failure as _Failure,
 } from "../../src/host/tools-rpc.js"
-import { ASK_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { PERSONAL_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 
 type Effect = "allow" | "deny" | "ask"
 type Rule = { action: string; resource: string; effect: Effect }
@@ -683,9 +683,9 @@ describe("registration", () => {
 
 describe("the shared copy's own block", () => {
   test("is Wispr Flow's: every known tool a method, every one a read, and the shapers are the identity", () => {
-    expect(METHODS).toHaveLength(READ_TOOLS.length + ASK_TOOLS.length + WRITE_TOOLS.length)
+    expect(METHODS).toHaveLength(READ_TOOLS.length + PERSONAL_TOOLS.length + WRITE_TOOLS.length)
     for (const method of METHODS) expect(method).toMatchObject({ kind: "mcp", class: "read" })
-    expect(METHODS.map((method) => method.name)).toEqual([...READ_TOOLS, ...ASK_TOOLS])
+    expect(METHODS.map((method) => method.name)).toEqual([...READ_TOOLS, ...PERSONAL_TOOLS])
     expect(shapeInput("any", { q: 1 }, { sessionID: "s", agent: "a", action: "x" })).toEqual({ q: 1 })
     expect(shapeResult("any", { text: "t" }, { sessionID: "s", agent: "a", action: "x" })).toEqual({ text: "t" })
   })

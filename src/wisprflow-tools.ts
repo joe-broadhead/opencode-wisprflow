@@ -32,7 +32,7 @@ export const READ_TOOLS: readonly string[] = [
  * companies and LinkedIn profiles; Wispr Flow lists it only for accounts with Wispr Contacts
  * (get_meeting_participants_enriched's description names it).
  */
-export const ASK_TOOLS: readonly string[] = ["get_participant_contacts"]
+export const PERSONAL_TOOLS: readonly string[] = ["get_participant_contacts"]
 
 /**
  * The plugin's own reads in the wisprflow namespace: events_list, Memory's source of meetings, which reads through
@@ -43,11 +43,11 @@ export const PLUGIN_READS: readonly string[] = ["events_list"]
 /** Known writes: none today. A tool Wispr Flow adds later is unknown, and the default block's `wisprflow_*` rule decides it. */
 export const WRITE_TOOLS: readonly string[] = []
 
-type ToolClass = "read" | "ask" | "write" | "unknown"
+type ToolClass = "read" | "personal" | "write" | "unknown"
 
 export function classify(name: string): ToolClass {
   if (READ_TOOLS.includes(name)) return "read"
-  if (ASK_TOOLS.includes(name)) return "ask"
+  if (PERSONAL_TOOLS.includes(name)) return "personal"
   if (WRITE_TOOLS.includes(name)) return "write"
   return "unknown"
 }

@@ -30,7 +30,9 @@ describe("docs", () => {
 
   // S5: version numbers live in package.json and the CHANGELOG heading only, and nothing says the package is unreleased.
   test.each(["README.md", "CONTRIBUTING.md", ...DOCS])("%s names no version of the plugin and no pre-release state", (file) => {
-    expect(text(file)).not.toMatch(/opencode-wisprflow@\d|\bv?\d+\.\d+\.\d+-|\bv?0\.0\.\d\b|not (yet )?published|provisional|"private"/i)
+    // D19: the README's install line names the release tag, and CONTRIBUTING's Releasing section names v0.0.0. Nothing else may.
+    const body = file === "CONTRIBUTING.md" ? text(file).replace(/#{2,3} Releasing.*?(?= #{2,3} |$)/, "") : text(file).replace("opencode-wisprflow#v0.0.0", "")
+    expect(body).not.toMatch(/opencode-wisprflow@\d|\bv?\d+\.\d+\.\d+-|\bv?0\.0\.\d\b|not (yet )?published|provisional|"private"/i)
   })
 
   // Once the plugin is removed and OpenCode reloads, `mcp logout wisprflow` finds no server: the README signs out first,

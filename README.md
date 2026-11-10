@@ -34,13 +34,15 @@ The plugin registers Wispr Flow's MCP server under the name `wisprflow`, adds de
 `/wisprflow-status` command, the `/wisprflow` status view and two skills. Every tool is Wispr Flow's, and OpenCode
 handles the connection, the sign-in and the stored credentials.
 
-A Git install is removed and updated by its installed spec: `opencode plugin remove github:joe-broadhead/opencode-wisprflow#v0.0.0`. `opencode plugin update` and `opencode plugin check` take the same spec.
+Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-wisprflow#v0.0.0`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-wisprflow#v<version>`.
 
-**Update** with `opencode plugin update github:joe-broadhead/opencode-wisprflow#v0.0.0`, then run `opencode reload`. An entry
-pinned to a tag does not update: remove the tag from its `plugins` entry first.
+Or add the plugin to `opencode.json` instead, with the same spec:
+
+```json
+{ "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.0" }] }
+```
 
 The install takes the GitHub release tag. Its commit carries the built `dist/`, so the install runs no build.
-A new release is a new tag: install it with its own `#v<version>` spec.
 
 ## Sign in
 
@@ -117,7 +119,7 @@ other people's words and contact details. Restrict it in any of these three ways
    | `"read-only"` | the read tools | nothing: everything else is **denied** |
 
    ```json
-   { "plugins": [{ "package": "@joe-broadhead/opencode-wisprflow", "options": { "access": "read-only" } }] }
+   { "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.0", "options": { "access": "read-only" } }] }
    ```
 
 2. **An agent that is read-only or asks**, with rules of its own, later than the plugin's:
@@ -183,7 +185,7 @@ Set options with the object form of the plugin entry:
 
 ```json
 {
-  "plugins": [{ "package": "@joe-broadhead/opencode-wisprflow", "options": { "allowUntestedHost": true } }]
+  "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.0", "options": { "allowUntestedHost": true } }]
 }
 ```
 
@@ -202,7 +204,7 @@ plugin entry in the system config: `/Library/Application Support/opencode/openco
 
 ```json
 {
-  "plugins": ["@joe-broadhead/opencode-wisprflow"]
+  "plugins": ["github:joe-broadhead/opencode-wisprflow#v0.0.0"]
 }
 ```
 
@@ -217,6 +219,7 @@ all, and Scratchpad through it, is set in Wispr Flow's admin portal.
 - **The tool list depends on the account.** An active HIPAA agreement or an organisation policy can turn Wispr Flow's MCP off, and a tool the plugin has not classified runs at the `access` value you set.
 - **Attendee contacts are readable at every `access` value.** `get_participant_contacts` is a read, so it is allowed unless you add a rule for it.
 - **Tested on OpenCode 2.2.3, 2.2.4, 2.2.5 and 2.2.6.** Other releases inside `>=2.2.3 <2.3.0` start, and status reports them as untested.
+- Updates are not automatic for a Git install, and `opencode plugin update` and `opencode plugin check` do not work on one: to move to a newer release, remove the old entry and add the new tag.
 
 ## Troubleshooting
 

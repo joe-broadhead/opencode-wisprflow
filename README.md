@@ -27,7 +27,17 @@ is allowed like every other tool by default: see [Permissions](#permissions).
 opencode plugin add github:joe-broadhead/opencode-wisprflow#v0.0.0
 ```
 
-Run `opencode reload`, or restart OpenCode, then run `/wisprflow-status`.
+Run `opencode reload`, or restart OpenCode. Then run `/wisprflow-status`: it shows `sign-in required` until you sign
+in (see [Sign in](#sign-in)).
+
+The plugin registers Wispr Flow's MCP server under the name `wisprflow`, adds default permission rules, the
+`/wisprflow-status` command, the `/wisprflow` status view and two skills. Every tool is Wispr Flow's, and OpenCode
+handles the connection, the sign-in and the stored credentials.
+
+A Git install is removed and updated by its installed spec: `opencode plugin remove github:joe-broadhead/opencode-wisprflow#v0.0.0`. `opencode plugin update` and `opencode plugin check` take the same spec.
+
+**Update** with `opencode plugin update github:joe-broadhead/opencode-wisprflow#v0.0.0`, then run `opencode reload`. An entry
+pinned to a tag does not update: remove the tag from its `plugins` entry first.
 
 The install takes the GitHub release tag. Its commit carries the built `dist/`, so the install runs no build.
 A new release is a new tag: install it with its own `#v<version>` spec.
@@ -260,7 +270,7 @@ credential store.
 1. Sign out: `opencode mcp logout wisprflow`. Right after OpenCode starts or reloads, it can answer
    `MCP server not found: wisprflow` for a few seconds; wait, then run it again.
 2. Check: `opencode auth list` no longer lists **Wispr Flow**.
-3. Remove the plugin: `opencode plugin remove @joe-broadhead/opencode-wisprflow`, then `opencode reload`.
+3. Remove the plugin: `opencode plugin remove github:joe-broadhead/opencode-wisprflow#v0.0.0`, then `opencode reload`.
    `opencode mcp list` no longer lists `wisprflow`.
 4. Remove any Wispr Flow rules you copied into your agents' own `permissions`.
 

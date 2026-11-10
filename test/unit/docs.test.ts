@@ -31,7 +31,7 @@ describe("docs", () => {
   // S5: version numbers live in package.json and the CHANGELOG heading only, and nothing says the package is unreleased.
   test.each(["README.md", "CONTRIBUTING.md", ...DOCS])("%s names no version of the plugin and no pre-release state", (file) => {
     // D19: the README's install line names the release tag, and CONTRIBUTING's Releasing section names v0.0.0. Nothing else may.
-    const body = file === "CONTRIBUTING.md" ? text(file).replace(/#{2,3} Releasing.*?(?= #{2,3} |$)/, "") : text(file).replace("opencode-wisprflow#v0.0.0", "")
+    const body = file === "CONTRIBUTING.md" ? text(file).replace(/#{2,3} Releasing.*?(?= #{2,3} |$)/, "") : text(file).split("opencode-wisprflow#v0.0.0").join("")
     expect(body).not.toMatch(/opencode-wisprflow@\d|\bv?\d+\.\d+\.\d+-|\bv?0\.0\.\d\b|not (yet )?published|provisional|"private"/i)
   })
 
@@ -41,7 +41,7 @@ describe("docs", () => {
     const uninstall = /## Uninstall(.*?)## Links/.exec(text("README.md"))?.[1] ?? ""
     const logout = uninstall.indexOf("opencode mcp logout wisprflow")
     const check = uninstall.indexOf("opencode auth list")
-    const remove = uninstall.indexOf("opencode plugin remove @joe-broadhead/opencode-wisprflow")
+    const remove = uninstall.indexOf("opencode plugin remove github:joe-broadhead/opencode-wisprflow#v0.0.0")
     expect(logout).toBeGreaterThanOrEqual(0)
     expect(check).toBeGreaterThan(logout)
     expect(remove).toBeGreaterThan(check)

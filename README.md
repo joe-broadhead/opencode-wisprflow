@@ -204,6 +204,14 @@ Members then only sign in: run `/connect` and choose Wispr Flow, then press `o` 
 permissions, add your rules for `wisprflow_*` tools to the same file. Whether members may use Wispr Flow's MCP at
 all, and Scratchpad through it, is set in Wispr Flow's admin portal.
 
+## Known limits
+
+- **Meetings need Cloud Sync.** A meeting recorded while Dictation cloud storage is off never appears, even after you turn it on.
+- **Some Wispr Flow data is out of reach.** No tool reads dictation history, the dictionary, snippets, styles, usage stats or Notetaker chat, and no tool takes audio.
+- **The tool list depends on the account.** An active HIPAA agreement or an organisation policy can turn Wispr Flow's MCP off, and a tool the plugin has not classified runs at the `access` value you set.
+- **Attendee contacts are readable at every `access` value.** `get_participant_contacts` is a read, so it is allowed unless you add a rule for it.
+- **Tested on OpenCode 2.2.3, 2.2.4, 2.2.5 and 2.2.6.** Other releases inside `>=2.2.3 <2.3.0` start, and status reports them as untested.
+
 ## Troubleshooting
 
 Run `/wisprflow-status` first. Its last line is the next step.

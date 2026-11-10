@@ -124,13 +124,14 @@ describe("the default rules block", () => {
 
 // Every "tested on …" mention states TESTED_HOSTS, so a release added to the list cannot leave a stale sentence behind.
 describe("tested hosts", () => {
-  const UNRELEASED = /## \[Unreleased\]([\s\S]*?)(?=\n## |$)/.exec(readFileSync(join(ROOT, "CHANGELOG.md"), "utf8"))?.[1] ?? ""
+  // The upcoming release: the first versioned section, up to the next "## " heading (the npm history follows it).
+  const RELEASE = /## \[[^\]]+\]([\s\S]*?)(?=\n## |$)/.exec(readFileSync(join(ROOT, "CHANGELOG.md"), "utf8"))?.[1] ?? ""
   const SOURCES: [string, string][] = [
     ["README.md", readFileSync(join(ROOT, "README.md"), "utf8")],
     ["AGENTS.md", readFileSync(join(ROOT, "AGENTS.md"), "utf8")],
     ["SECURITY.md", readFileSync(join(ROOT, "SECURITY.md"), "utf8")],
     ["docs/configuration.md", readFileSync(join(ROOT, "docs/configuration.md"), "utf8")],
-    ["CHANGELOG.md (Unreleased)", UNRELEASED],
+    ["CHANGELOG.md (the release section)", RELEASE],
   ]
 
   test.each(SOURCES)("%s names exactly TESTED_HOSTS wherever it says what is tested", (file, text) => {

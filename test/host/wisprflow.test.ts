@@ -22,7 +22,8 @@ const SIGN_IN = "Run /connect and choose Wispr Flow, then press o or Enter to op
 const SERVED = [READ, ...(WRITE ? [WRITE] : []), NEW].map((tool) => `wisprflow_${tool}`).sort()
 
 // Starting a host takes several seconds, more on a busy machine.
-setDefaultTimeout(120_000)
+// Starting OpenCode and its plugins can pass two minutes on a busy machine (WF-03), so each test and hook gets three.
+setDefaultTimeout(180_000)
 afterAll(cleanup)
 
 test("the forced Wispr Flow catalogue stays under 1,000 tokens", async () => {

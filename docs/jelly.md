@@ -47,6 +47,15 @@ None: `jelly.views` and `jelly.rpc` are empty, and the plugin adds no Home feed.
 
 Jelly folds the declared sign-ins into this plugin's one card, which shows each as Connected, Not signed in or Sign in again (expired or revoked), and starts, renews and signs out of each. An agent's `jelly_connection_request`, or a tool result that names this plugin's "Run /connect and choose …" next step, opens the same card. The plugin still signs in through OpenCode, as it does without Jelly; the declaration only tells Jelly which of the engine's integrations and servers are this plugin's.
 
+## Settings
+
+The one setting is `access`. It declares its three values as `choices`, with Jelly's own labels: **Allowed** (`all`,
+the default), **Ask before changes** (`ask-changes`) and **Read only** (`read-only`), so Jelly draws a choice, never free
+text. Choices need a Jelly that includes app#1301: an older Jelly turns down a setting that declares them.
+`test/unit/jelly.test.ts` checks the settings against Jelly's setting contract, restated in
+`test/support/jelly-settings.ts`, and checks that the options parser takes every declared value and rejects one outside
+the set.
+
 ## Versions
 
 Jelly's curated catalogue pins an exact version. Each release is published under a new version, so a review in

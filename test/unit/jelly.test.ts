@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { DISPLAY_NAME, SERVER_NAME } from "../../src/constants.js"
-import { parseOptions } from "../../src/options.js"
+import { ACCESS_VALUES, parseOptions } from "../../src/options.js"
 import { defaultRules, evaluate, type Rule } from "../../src/permissions.js"
 import { PERSONAL_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 import { type Declaration, type DeclaredTool, declarationProblems, docProblems, readPackage } from "../support/jelly-kit.js"
+import { ACCESS_CHOICES, type DeclaredSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
 
 /**
  * The `jelly` section of package.json, which Jelly reads without loading the plugin. Jelly writes each declared effect
@@ -39,11 +40,26 @@ describe("the jelly declaration", () => {
     expect(jelly.title).toBe(DISPLAY_NAME)
     expect(jelly.rpc).toEqual([])
     expect(jelly.views).toEqual([])
-    expect(jelly.contributes).toEqual({ homeFeeds: [], homeWidgets: [], workKinds: [], settings: [{ key: "access", label: "Access", type: "string", default: parseOptions({}).access, description: expect.any(String) }] })
+    expect(jelly.contributes).toEqual({ homeFeeds: [], homeWidgets: [], workKinds: [], settings: [{ key: "access", label: "Access", type: "string", choices: ACCESS_CHOICES, default: parseOptions({}).access, description: expect.any(String) }] })
     expect(parseOptions({ access: "read-only" }).access).toBe("read-only")
     expect(jelly.signIns).toEqual([{ id: SERVER_NAME, label: DISPLAY_NAME, server: SERVER_NAME }])
   })
 
+  test("its settings pass Jelly's setting contract, and access offers only values the parser takes", () => {
+    const { settings } = jelly.contributes as { settings: DeclaredSetting[] }
+    expect(settingsProblems(settings)).toEqual([])
+    const access = settings.find((setting) => setting.key === "access")!
+    const values = settingChoices(access)!.map((choice) => choice.value)
+    expect(values).toEqual([...ACCESS_VALUES])
+    for (const value of values) {
+      expect(settingValueIssue(access, value)).toBeNull()
+      expect(parseOptions({ access: value }).access as string).toBe(value)
+    }
+    for (const outside of ["write", "read", "none", ""]) {
+      expect(settingValueIssue(access, outside)).not.toBeNull()
+      expect(() => parseOptions({ access: outside })).toThrow("OPTIONS_INVALID")
+    }
+  })
 
 })
 

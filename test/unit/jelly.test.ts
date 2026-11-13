@@ -4,7 +4,7 @@ import { ACCESS_VALUES, parseOptions } from "../../src/options.js"
 import { defaultRules, evaluate, type Rule } from "../../src/permissions.js"
 import { PERSONAL_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 import { type Declaration, type DeclaredTool, declarationProblems, docProblems, readPackage } from "../support/jelly-kit.js"
-import { ACCESS_CHOICES, type DeclaredSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
+import { ACCESS_CHOICES, type PluginSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
 
 /**
  * The `jelly` section of package.json, which Jelly reads without loading the plugin. Jelly writes each declared effect
@@ -46,7 +46,7 @@ describe("the jelly declaration", () => {
   })
 
   test("its settings pass Jelly's setting contract, and access offers only values the parser takes", () => {
-    const { settings } = jelly.contributes as { settings: DeclaredSetting[] }
+    const { settings } = jelly.contributes as { settings: PluginSetting[] }
     expect(settingsProblems(settings)).toEqual([])
     const access = settings.find((setting) => setting.key === "access")!
     const values = settingChoices(access)!.map((choice) => choice.value)

@@ -13,6 +13,10 @@ const ROOT = fileURLToPath(new URL("../..", import.meta.url))
 const DOCS = readdirSync(join(ROOT, "docs")).map((name) => `docs/${name}`)
 // Everything a user or the model reads about the current release.
 const FILES = ["README.md", "SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md", ...DOCS, ...readdirSync(join(ROOT, "skills")).map((name) => `skills/${name}/SKILL.md`)]
+const { version } = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { version: string }
+const SPEC = `opencode-wisprflow#v${version}`
+// The upgrade example removes the previous release's entry, so it names that one older tag.
+const UPGRADE = /remove the old entry with `opencode plugin remove github:joe-broadhead\/opencode-wisprflow#v(\d+)\.(\d+)\.(\d+)`/
 const text = (file: string) => readFileSync(join(ROOT, file), "utf8").replace(/\s+/g, " ")
 
 describe("docs", () => {
@@ -30,9 +34,17 @@ describe("docs", () => {
 
   // S5: version numbers live in package.json and the CHANGELOG heading only, and nothing says the package is unreleased.
   test.each(["README.md", "CONTRIBUTING.md", ...DOCS])("%s names no version of the plugin and no pre-release state", (file) => {
-    // D19: the README's install line names the release tag, and CONTRIBUTING's Releasing section names v0.0.0. Nothing else may.
-    const body = file === "CONTRIBUTING.md" ? text(file).replace(/#{2,3} Releasing.*?(?= #{2,3} |$)/, "") : text(file).replaceAll("opencode-wisprflow#v0.0.0", "")
+    // D19: the README's install line names the release tag, its upgrade example the previous one, and CONTRIBUTING's
+    // Releasing section names v0.0.0. Nothing else may.
+    const body = file === "CONTRIBUTING.md" ? text(file).replace(/#{2,3} Releasing.*?(?= #{2,3} |$)/, "") : text(file).replace(UPGRADE, "").replaceAll(SPEC, "")
     expect(body).not.toMatch(/opencode-wisprflow@\d|\bv?\d+\.\d+\.\d+-|\bv?0\.0\.\d\b|not (yet )?published|provisional|"private"/i)
+  })
+
+  test("the README's upgrade example removes an older release than this one", () => {
+    const older = UPGRADE.exec(text("README.md"))?.slice(1).map(Number) ?? []
+    const current = version.split(".").map(Number)
+    expect(older).toHaveLength(3)
+    expect(older[0]! * 1e6 + older[1]! * 1e3 + older[2]!).toBeLessThan(current[0]! * 1e6 + current[1]! * 1e3 + current[2]!)
   })
 
   // Once the plugin is removed and OpenCode reloads, `mcp logout wisprflow` finds no server: the README signs out first,
@@ -41,7 +53,7 @@ describe("docs", () => {
     const uninstall = /## Uninstall(.*?)## Links/.exec(text("README.md"))?.[1] ?? ""
     const logout = uninstall.indexOf("opencode mcp logout wisprflow")
     const check = uninstall.indexOf("opencode auth list")
-    const remove = uninstall.indexOf("opencode plugin remove github:joe-broadhead/opencode-wisprflow#v0.0.0")
+    const remove = uninstall.indexOf(`opencode plugin remove github:joe-broadhead/${SPEC}`)
     expect(logout).toBeGreaterThanOrEqual(0)
     expect(check).toBeGreaterThan(logout)
     expect(remove).toBeGreaterThan(check)

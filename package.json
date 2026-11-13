@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-wisprflow",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Unofficial OpenCode plugin for Wispr Flow: search and read your Notetaker meetings, transcripts, Scratchpad notes and calendar through Wispr Flow's official MCP server",
   "keywords": [
     "opencode",
@@ -217,6 +217,23 @@
           "key": "access",
           "label": "Access",
           "type": "string",
+          "choices": [
+            {
+              "value": "all",
+              "label": "Allowed",
+              "description": "Every tool runs without asking, reads and changes alike."
+            },
+            {
+              "value": "ask-changes",
+              "label": "Ask before changes",
+              "description": "Reads run without asking. Each change asks you first."
+            },
+            {
+              "value": "read-only",
+              "label": "Read only",
+              "description": "Reads run. Changes never run."
+            }
+          ],
           "default": "all",
           "description": "all, ask-changes or read-only. Generates default rules for agents with a base allow rule."
         }

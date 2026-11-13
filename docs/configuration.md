@@ -4,7 +4,7 @@ Every option is optional. The smallest setup is one entry in `plugins`:
 
 ```json
 {
-  "plugins": ["github:joe-broadhead/opencode-wisprflow#v0.0.0"]
+  "plugins": ["github:joe-broadhead/opencode-wisprflow#v0.0.1"]
 }
 ```
 
@@ -12,7 +12,7 @@ To set options, use the object form:
 
 ```json
 {
-  "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.0", "options": { "allowUntestedHost": true } }]
+  "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.1", "options": { "allowUntestedHost": true } }]
 }
 ```
 
@@ -289,7 +289,7 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 For example:
 
 ```text
-OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the default), found "yes". Next step: Fix the plugin options in opencode.json, for example "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.0", "options": { "allowUntestedHost": true } }].
+OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the default), found "yes". Next step: Fix the plugin options in opencode.json, for example "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.1", "options": { "allowUntestedHost": true } }].
 ```
 
 Errors from Wispr Flow's server and from OpenCode pass through unchanged, except in the tools RPC for scripts, whose

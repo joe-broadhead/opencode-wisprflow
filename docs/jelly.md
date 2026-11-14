@@ -17,7 +17,10 @@ each tool and each sign-in, accept only their own fields.
 ## Tools and permissions
 
 17 tools are declared (17 read-only): the 15 Wispr Flow lists for every account, `get_participant_contacts`,
-which it lists only for accounts with Wispr Contacts, and the plugin's own `events_list`. Jelly's agents have
+which it lists only for accounts with Wispr Contacts, and the plugin's own `events_list`. The declared
+`get_participant_contacts` carries a `note` saying so. `test/unit/live-capture.test.ts` checks the declaration against
+Wispr Flow's own tool list, captured live on 14 November 2026 for an account with Wispr Contacts
+(`test/fixtures/live-tools.json`): 16 served tools, each declared with Wispr Flow's `readOnlyHint`. Jelly's agents have
 no base "allow everything" rule, so this plugin's own default rules, which it puts after that
 rule, never reach them. Jelly writes each declared `ask` or `deny` as that tool's default instead
 (the person's own choice replaces it), and denies a read-only helper every tool not marked
@@ -44,6 +47,11 @@ None: `jelly.views` and `jelly.rpc` are empty, and the plugin adds no Home feed.
 ## Signing in
 
 `jelly.signIns` declares one sign-in, `wisprflow`, for Wispr Flow's MCP server `wisprflow`, which signs in with OpenCode's MCP OAuth. When the server needs a new sign-in, the row says Sign in again.
+
+Signing in again from the card starts Memory's Wispr Flow source over. Wispr Flow has no tool that names the signed-in
+account, so `events_list` names the owner from OpenCode's sign-in: its label when that is an email, otherwise the
+credential's own id, which a new sign-in changes. The cursor holds a digest of the owner, so after a new sign-in with a
+non-email label an old cursor is refused (`EVENTS_CURSOR_INVALID`), and the collector starts again from a `since`.
 
 Jelly folds the declared sign-ins into this plugin's one card, which shows each as Connected, Not signed in or Sign in again (expired or revoked), and starts, renews and signs out of each. An agent's `jelly_connection_request`, or a tool result that names this plugin's "Run /connect and choose …" next step, opens the same card. The plugin still signs in through OpenCode, as it does without Jelly; the declaration only tells Jelly which of the engine's integrations and servers are this plugin's.
 

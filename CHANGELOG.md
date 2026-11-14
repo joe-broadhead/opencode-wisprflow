@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Jelly: the declared `get_participant_contacts` carries a note that Wispr Flow serves it only to accounts with Wispr
+  Contacts, and what it reads. Wispr Flow's live tool list of 14 November serves it, so it stays declared, read-only.
+- `docs/jelly.md` says that signing in again from Jelly's card starts Memory's Wispr Flow source over, because the
+  owner comes from the sign-in.
+
+### Added
+
+- `test/fixtures/live-tools.json`, Wispr Flow's tool list for a signed-in user with Wispr Contacts, captured live on 14
+  November 2026, and a test that fails when the declaration and that list disagree.
+
 ## [0.0.1] - 2026-11-13
 
 ### Added

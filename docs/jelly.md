@@ -48,7 +48,7 @@ None: `jelly.views` and `jelly.rpc` are empty, and the plugin adds no Home feed.
 
 `jelly.signIns` declares one sign-in, `wisprflow`, for Wispr Flow's MCP server `wisprflow`, which signs in with OpenCode's MCP OAuth. When the server needs a new sign-in, the row says Sign in again.
 
-Signing in again from the card starts Memory's Wispr Flow source over. Wispr Flow has no tool that names the signed-in
+Signing in again from the card starts Memory's Wispr Flow source over only when the sign-in's label is not an email. Wispr Flow has no tool that names the signed-in
 account, so `events_list` names the owner from OpenCode's sign-in: its label when that is an email, otherwise the
 credential's own id, which a new sign-in changes. The cursor holds a digest of the owner, so after a new sign-in with a
 non-email label an old cursor is refused (`EVENTS_CURSOR_INVALID`), and the collector starts again from a `since`.

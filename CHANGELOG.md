@@ -2,14 +2,18 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.2] - 2026-11-14
 
 ### Changed
 
 - Jelly: the declared `get_participant_contacts` carries a note that Wispr Flow serves it only to accounts with Wispr
   Contacts, and what it reads. Wispr Flow's live tool list of 14 November serves it, so it stays declared, read-only.
-- `docs/jelly.md` says that signing in again from Jelly's card starts Memory's Wispr Flow source over, because the
-  owner comes from the sign-in.
+- `docs/jelly.md` says that signing in again from Jelly's card starts Memory's Wispr Flow source over only when the
+  sign-in's label is not an email, because the owner comes from the sign-in.
+- `package.json` is `"private": true`, so nothing can be published to npm; an install from the release tag is
+  unaffected. It is kept in its canonical form, which the kit tests check in `npm run check`.
+- The release kit's plan, build and release scripts check the package's `"private": true` and canonical form, and a
+  `build` script is added to `package.json`.
 
 ### Added
 

@@ -24,7 +24,7 @@ is allowed like every other tool by default: see [Permissions](#permissions).
 ## Install
 
 ```sh
-opencode plugin add github:joe-broadhead/opencode-wisprflow#v0.0.1
+opencode plugin add github:joe-broadhead/opencode-wisprflow#v0.0.2
 ```
 
 Run `opencode reload`, or restart OpenCode. Then run `/wisprflow-status`: it shows `sign-in required` until you sign
@@ -34,12 +34,12 @@ The plugin registers Wispr Flow's MCP server under the name `wisprflow`, adds de
 `/wisprflow-status` command, the `/wisprflow` status view and two skills. Every tool is Wispr Flow's, and OpenCode
 handles the connection, the sign-in and the stored credentials.
 
-Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-wisprflow#v0.0.0`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-wisprflow#v<version>`.
+Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-wisprflow#v0.0.1`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-wisprflow#v<version>`.
 
 Or add the plugin to `opencode.json` instead, with the same spec:
 
 ```json
-{ "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.1" }] }
+{ "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.2" }] }
 ```
 
 The install takes the GitHub release tag. Its commit carries the built `dist/`, so the install runs no build.
@@ -119,7 +119,7 @@ other people's words and contact details. Restrict it in any of these three ways
    | `"read-only"` | the read tools | nothing: everything else is **denied** |
 
    ```json
-   { "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.1", "options": { "access": "read-only" } }] }
+   { "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.2", "options": { "access": "read-only" } }] }
    ```
 
 2. **An agent that is read-only or asks**, with rules of its own, later than the plugin's:
@@ -185,7 +185,7 @@ Set options with the object form of the plugin entry:
 
 ```json
 {
-  "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.1", "options": { "allowUntestedHost": true } }]
+  "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.2", "options": { "allowUntestedHost": true } }]
 }
 ```
 
@@ -204,7 +204,7 @@ plugin entry in the system config: `/Library/Application Support/opencode/openco
 
 ```json
 {
-  "plugins": ["github:joe-broadhead/opencode-wisprflow#v0.0.1"]
+  "plugins": ["github:joe-broadhead/opencode-wisprflow#v0.0.2"]
 }
 ```
 
@@ -274,7 +274,7 @@ credential store.
 1. Sign out: `opencode mcp logout wisprflow`. Right after OpenCode starts or reloads, it can answer
    `MCP server not found: wisprflow` for a few seconds; wait, then run it again.
 2. Check: `opencode auth list` no longer lists **Wispr Flow**.
-3. Remove the plugin: `opencode plugin remove github:joe-broadhead/opencode-wisprflow#v0.0.1`, then `opencode reload`.
+3. Remove the plugin: `opencode plugin remove github:joe-broadhead/opencode-wisprflow#v0.0.2`, then `opencode reload`.
    `opencode mcp list` no longer lists `wisprflow`.
 4. Remove any Wispr Flow rules you copied into your agents' own `permissions`.
 

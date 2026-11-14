@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-wisprflow",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Unofficial OpenCode plugin for Wispr Flow: search and read your Notetaker meetings, transcripts, Scratchpad notes and calendar through Wispr Flow's official MCP server",
   "keywords": [
@@ -193,7 +193,8 @@
         "name": "wisprflow.get_participant_contacts",
         "permission": "wisprflow_get_participant_contacts",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": true,
+        "note": "Wispr Flow serves it only to accounts with Wispr Contacts. It reads other people's job titles, companies and LinkedIn profiles."
       }
     ],
     "skills": [

@@ -2,12 +2,6 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Changed
-
-- The icon is now Wispr Flow's own mark, Wispr Flow's five-bar symbol, the dark symbol of Wispr Flow's logo kit, in place of the family's drawn mark; `opencode.vendor.mark` is `true`, and the README says Wispr Flow is a trademark of Wispr AI, Inc.
-
 ## [0.0.4] - 2026-11-15
 
 ### Changed
@@ -20,6 +14,7 @@ All notable changes to this project are documented here. The format follows [Kee
   `session.tool.failed` (it listens only for integration, MCP and credential events), and it has no use for the new
   `session.fork` hook. `events_list` hands the tool's signal to Wispr Flow's `search_meetings`, so it already stops
   when the person presses Stop.
+- The icon is now Wispr Flow's own mark, Wispr Flow's five-bar symbol, the dark symbol of Wispr Flow's logo kit, in place of the family's drawn mark; `opencode.vendor.mark` is `true`, and the README says Wispr Flow is a trademark of Wispr AI, Inc.
 
 ## [0.0.3] - 2026-11-15
 

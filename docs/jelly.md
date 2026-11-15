@@ -49,9 +49,9 @@ None: `jelly.views` and `jelly.rpc` are empty, and the plugin adds no Home feed.
 `jelly.signIns` declares one sign-in, `wisprflow`, for Wispr Flow's MCP server `wisprflow`, which signs in with OpenCode's MCP OAuth. When the server needs a new sign-in, the row says Sign in again.
 
 Signing in again from the card starts Memory's Wispr Flow source over only when the sign-in's label is not an email. Wispr Flow has no tool that names the signed-in
-account, so `events_list` names the owner from OpenCode's sign-in: its label when that is an email, otherwise the
+account, so `events_list` and `probe` name the owner from OpenCode's sign-in: its label when that is an email, otherwise the
 credential's own id, which a new sign-in changes. The cursor holds a digest of the owner, so after a new sign-in with a
-non-email label an old cursor is refused (`EVENTS_CURSOR_INVALID`), and the collector starts again from a `since`.
+non-email label an old cursor is refused (`ACCOUNT_MISMATCH`), and the collector calls `probe` and starts again from a `since`.
 
 Jelly folds the declared sign-ins into this plugin's one card, which shows each as Connected, Not signed in or Sign in again (expired or revoked), and starts, renews and signs out of each. An agent's `jelly_connection_request`, or a tool result that names this plugin's "Run /connect and choose …" next step, opens the same card. The plugin still signs in through OpenCode, as it does without Jelly; the declaration only tells Jelly which of the engine's integrations and servers are this plugin's.
 
@@ -69,4 +69,4 @@ the set.
 Jelly's curated catalogue pins an exact version. Each release is published under a new version, so a review in
 Jelly can tell the two apart.
 
-The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit, the shared part of the tools RPC (`src/host/tools-rpc.ts`) and the events_list source contract (`src/host/events-list.ts`) equal to the copies every plugin carries.
+The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit equal to the copy every plugin carries. The tools RPC and the source contract come from the pinned `@we-the-rebel-alliance/source-contract` package, bundled into `dist/index.js`; `package.json`'s `sources` declares `wisprflow.meetings`, which Jelly reads from the installed package, and `probe`, a tools RPC method rather than a tool, is not declared among the tools.

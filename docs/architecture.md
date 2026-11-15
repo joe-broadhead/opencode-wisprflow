@@ -18,9 +18,8 @@ no tool of its own and has no runtime dependencies.
 | `src/permissions.ts` | The default rules, their placement, and detection of agents without them |
 | `src/status.ts` | The status model and text, `/wisprflow-status`, and the status RPC method |
 | `src/skills.ts` | Loading and registering the skills |
-| `src/events.ts` | `wisprflow_events_list` and its tools RPC method: Memory's source of meetings, through `search_meetings`, with its cursor, owner and errors |
-| `src/host/events-list.ts` | The shared `events_list` contract, carried unchanged: the event type, input, cursors, checks and conformance |
-| `src/host/tools-rpc.ts` | The tools RPC for scripts, `wisprflow.meetings.tools`; a copy of a module shared by several plugins, with Wispr Flow's part in one marked block |
+| `src/events.ts` | The `wisprflow.meetings` source: `wisprflow_events_list` and its tools RPC method, through `search_meetings`, with its bound cursor, owner and errors, and the tools RPC method `probe`, on the source contract's `events` and `cursor` modules |
+| `src/tools-rpc.ts` | Wispr Flow's part of the tools RPC for scripts, `wisprflow.meetings.tools`: the method table, the next steps and the shapers, as the one `ToolsRpcPlugin` value the source contract's `tools-rpc` module takes |
 | `src/tui.ts` | The terminal UI part: the plugin `wisprflow.meetings.tui` and the `/wisprflow` dialog |
 | `src/constants.ts` | IDs, the server name and URL, the Code Mode namespace description, the supported host range, the tested releases (`TESTED_HOSTS`, the one list the checks and status use) and the error shape. No imports, so `scripts/check.mjs` can load it |
 | `src/version.ts` | The plugin's version from `package.json`; the build replaces it with the version string alone |
@@ -47,7 +46,8 @@ typechecks. The package exports `.` (`dist/index.js`) and `./tui` (`dist/tui.js`
 6. `ctx.agent.transform` inserts the default rules after each agent's base `* * allow`.
 7. `ctx.skill.transform`, `ctx.command.transform` (`/wisprflow-status`) and `ctx.rpc.register`
    (`wisprflow.meetings/status`).
-8. `registerToolsRpc` registers the tools RPC, `wisprflow.meetings.tools`, and its `evaluate` hook.
+8. `registerToolsRpc`, the source contract's, registers the tools RPC, `wisprflow.meetings.tools`, with `events_list`
+   and `probe`, and its `evaluate` hook.
 9. `watchIntegration` starts. Setup returns one cleanup that stops it and disposes the tools RPC.
 
 Transforms are synchronous and never throw: a failure is kept as a problem for status, and cleared when the next replay
@@ -89,8 +89,9 @@ query.
 ## Tools RPC
 
 `wisprflow.meetings.tools` lets a script call every known tool with no model; [Scripting](scripting.md) is the user's
-view. Its methods are `describe` and one per name in `READ_TOOLS`, `PERSONAL_TOOLS` and `WRITE_TOOLS`, named after the
-upstream tool and carrying a tools RPC class (every Wispr Flow tool is `read`). It is an allowlist: a tool that Wispr
+view. Its methods are `describe`, one per name in `READ_TOOLS`, `PERSONAL_TOOLS` and `WRITE_TOOLS`, named after the
+upstream tool and carrying a tools RPC class (every Wispr Flow tool is `read`), and the plugin's own `events_list` and
+`probe` (both `read`), which run their own specs. It is an allowlist: a tool that Wispr
 Flow adds later is not a method until it is classified, and `describe` lists it as unclassified. `describe` reports
 each method as available or not from what OpenCode lists now.
 
@@ -112,7 +113,8 @@ A call is `{ sessionID, input }`. The module:
 
 While a call runs, its id is live. A `permission.hook("evaluate")` turns an `ask` whose source id is live into a deny,
 so the script gets `PERMISSION_DENIED` at once and no prompt waits. It changes nothing else; this is the plugin's only
-permission hook, and the forbidden scan allows exactly this one.
+permission hook, it comes from the source contract's module, and the forbidden scan allows exactly this one, in the
+bundle.
 
 A `Tool.Error` with a cause is a permission refusal; one without a cause is Wispr Flow's own error (`isError`), which
 becomes `UPSTREAM_ERROR` with its first line, at most 300 characters, with tokens and URL queries removed. Any other

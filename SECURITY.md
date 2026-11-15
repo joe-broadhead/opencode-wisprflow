@@ -30,8 +30,11 @@ OpenCode project.
   a meeting out of its answers, and to show attendees' details only when asked about them.
 - `wisprflow_events_list` reads the meetings Wispr Flow captured through OpenCode's own `search_meetings`, and returns
   each one's title, start, up to 5 attendees' names and emails and its `share_link`, with OpenCode's sign-in label as
-  the owner. Memory's collector calls it to copy these events to your private memory space, after you turn Wispr Flow
-  on as a source; the plugin itself sends them nowhere and stores nothing. It never reads contacts, transcripts or notes.
+  the owner. It refuses a meeting whose title or summary holds a secret. The tools RPC method `probe` returns only that
+  owner, and calls Wispr Flow for nothing. Memory's collector calls them to copy these events to your private memory
+  space, after you turn Wispr Flow on as a source; the plugin itself sends them nowhere and stores nothing. Neither
+  reads contacts, transcripts or notes, and `package.json`'s `sources` declares exactly `search_meetings` as the
+  source's operation.
 - Tool results go to your model provider, like any other tool result in the session.
 - On Wispr Flow's enterprise plans, note and transcript reads through MCP are recorded in Wispr Flow's audit logs.
 - Maintainer drift check: `scripts/check-wisprflow-tools.mjs` reads a saved tool list from a file and compares the

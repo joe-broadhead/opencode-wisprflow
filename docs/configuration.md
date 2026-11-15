@@ -301,22 +301,26 @@ this feature." or "Too many requests", are listed in the README's Troubleshootin
 
 ## Events list
 
-`wisprflow_events_list` (`tools.wisprflow.events_list` in Code Mode, and the tools RPC method `events_list`) is
-Wispr Flow's side of Memory's sources funnel: the shared `events_list` contract, `src/host/events-list.ts`, which
-every source plugin carries unchanged. It lists the meetings Wispr Flow captured since a cursor, as normalised events,
-oldest first. It only reads, never asks and calls no model, so Memory's collector can run it unattended.
+`package.json`'s `sources` declares one source under source-contract version 1, `wisprflow.meetings`
+(`@we-the-rebel-alliance/source-contract`): `wisprflow_events_list` (`tools.wisprflow.events_list` in Code Mode, and
+the tools RPC method `events_list`) lists the meetings Wispr Flow captured since a cursor, as normalised events, oldest
+first, and the tools RPC method `probe` names who is signed in. Both only read, never ask and call no model, so a
+consumer such as Memory's collector can run them unattended.
 
 ```
+probe({ source?, account? })
+  → { source: "wisprflow", account: "default", owner: { id, label }, trust: "untrusted" }
+
 events_list({ since?, cursor?, limit?, account?, source? })
-  → { source: "wisprflow", account: "default", owner: { id, label }, events, cursor, more, trust: "untrusted" }
+  → { source: "wisprflow", account: "default", owner: { id, label }, events, cursor, more, refused?, plugin, asOf, trust: "untrusted" }
 ```
 
 | Input | Meaning |
 | --- | --- |
 | `since` | Where to start without a cursor: an ISO date (a UTC day) or date-time with `Z` or an offset. Default: 24 hours ago. |
-| `cursor` | The previous result's cursor. It wins over `since`. |
-| `limit` | Most events, 1 to 500; 100 by default. A result also stops before 900,000 bytes of JSON. |
-| `account` | `default`, Wispr Flow's one account. |
+| `cursor` | The previous result's cursor. It wins over `since`, and needs `account`. |
+| `limit` | Most events, 1 to 500; 100 by default. A result also stops before 64 KiB of JSON. |
+| `account` | `default`, Wispr Flow's one account, as `probe` names it. Required with a cursor. |
 | `source` | `wisprflow`, the one source. |
 
 It asserts `wisprflow_events_list`, then reads through OpenCode's own `wisprflow_search_meetings`, whose rule applies
@@ -325,13 +329,21 @@ never reads contacts, transcripts or notes, and never passes `contact_ids`.
 
 Each event is one meeting: kind `meeting`, the meeting id (for `get_meeting`), its start, its title, up to 5
 attendees and a shared meeting's owner as actors (`mailto:` and the email, or `name:` and the name), its
-`share_link`, and the labels `shared` (another person's notes) and `transcript`. A meeting is listed once it started
-2 hours ago, so its notes are most likely done. The cursor is the (start, id) of the last meeting listed: calling again
-with it lists what follows, and an older cursor lists the same meetings again.
+`share_link`, and the labels `shared` (another person's notes) and `transcript`. A meeting whose title or summary holds
+a secret, such as a key, is never listed: `refused` names it with the reason `secret`, and the cursor moves past it. A
+meeting is listed once it started 2 hours ago, so its notes are most likely done. The cursor is the (start, id) of the
+last meeting listed: calling again with it lists what follows, and an older cursor lists the same meetings again.
 
-Wispr Flow has no tool that names the signed-in account, so the owner is OpenCode's sign-in for the `wisprflow`
-server: `mailto:` and its label when the label is an email, otherwise its credential's id, which a new sign-in
-changes. The cursor holds a digest of the owner, so after a new sign-in an old cursor is refused.
+Wispr Flow has no tool that names the signed-in account, so the owner, on every page and in `probe` alike, is
+OpenCode's sign-in for the `wisprflow` server: `mailto:` and its label when the label is an email, otherwise its
+credential's id, which a new sign-in changes. `probe` asserts `wisprflow_probe` and reads only that sign-in: it calls
+Wispr Flow for nothing. The cursor is bound to the plugin, the source and the account, and holds a digest of the
+owner: a cursor from another sign-in is refused with `ACCOUNT_MISMATCH` before any read (call `probe`, then start
+again with `since`), and one this source did not issue, an earlier version's included, with `CURSOR_INVALID`.
+
+The default rules allow `wisprflow_events_list` and `wisprflow_probe`. `events_list`'s read, `wisprflow_search_meetings`,
+must be allowed too for the agent of the session that runs it; a consumer's grant names exactly that operation, from
+`sources`.
 
 ## Status and RPC
 

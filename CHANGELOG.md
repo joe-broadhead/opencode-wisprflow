@@ -2,6 +2,49 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Wispr Flow's meetings as a source under the shared source contract, `@we-the-rebel-alliance/source-contract`
+  v0.1.0: `package.json`'s new top-level `sources` key declares `wisprflow.meetings`, an `events` source of kind
+  `meeting` read with `events_list` (input `source` `wisprflow`), private, `cost.class: "free"`, `maxBytes` 65,536, with
+  exactly the Wispr Flow tool its read calls as its operation (`search_meetings`), the tools RPC
+  `wisprflow.meetings.tools` and the probe action `wisprflow_probe`. It declares no identity operation: Wispr Flow has
+  no tool that names the account, and the contract's schema does not yet take an empty list. Memory and jelly read the
+  declaration from the installed package, with the contract's `descriptor`.
+- For Memory and jelly: the tools RPC method `probe` (action `wisprflow_probe`, allowed by the default rules at every
+  `access`) answers `{ source, account: "default", owner, trust }`, the owner being OpenCode's sign-in exactly as every
+  page names it (`mailto:` and the label when it is an email, otherwise `wisprflow:credential:` and the credential's
+  id). It calls Wispr Flow for nothing, and refuses another account with `ACCOUNT_MISMATCH`.
+- A page also carries `plugin`, `asOf` and `refused[]`: a meeting whose title or summary holds a secret is refused for
+  good with `reason: "secret"`, and the cursor moves past it.
+- `npm run check` runs the contract's conformance kit over the declared source (the new `conformance` stage, in CI
+  too), on a synthetic Wispr Flow with no Wispr Flow call, and writes `reports/conformance-report.json` (git-ignored,
+  the same bytes every run) for a release to attach. Every check that applies passes. The report stays incomplete on
+  the kit's expired-cursor check: a cursor is a meeting's start and id, which never expire, and Wispr Flow gives no sign
+  of history it no longer serves, so the source never answers `CURSOR_EXPIRED`.
+
+### Changed
+
+- For Memory, required input: a call with a `cursor` names `account` (`default`, as `probe` answers it); without it
+  the call is refused with `INPUT_INVALID`. A first listing may still leave `account` out.
+- For Memory, a cursor restart: the cursor is the contract's bound cursor (plugin `wisprflow`, source `wisprflow`,
+  account `default`). A cursor an earlier version issued is refused with `CURSOR_INVALID`; start again with `since`. A
+  cursor from another sign-in is now `ACCOUNT_MISMATCH` (was `EVENTS_CURSOR_INVALID`), before any read: call `probe`,
+  then start again. The account (`default`) and the owner are unchanged.
+- The error codes of `events_list` are the source contract's: `INPUT_INVALID`, `CURSOR_INVALID`, `ACCOUNT_MISMATCH`,
+  `SOURCE_UNKNOWN`, `NEEDS_SIGN_IN` (no sign-in to name as the owner) and `UNAVAILABLE` (the server cannot be called,
+  or Wispr Flow's own failure) replace `EVENTS_INVALID_INPUT`, `EVENTS_CURSOR_INVALID`, `EVENTS_ACCOUNT_UNKNOWN`,
+  `EVENTS_SOURCE_UNKNOWN`, `EVENTS_OWNER_UNKNOWN`, `EVENTS_UNAVAILABLE` and `EVENTS_READ_FAILED`.
+- A page holds at most 64 KiB of JSON (the contract's default and the host's RPC cap), instead of 900,000 bytes.
+- The tools RPC and the events contract are the source contract's, bundled into `dist/index.js` from the pinned tag;
+  `src/host/tools-rpc.ts` and `src/host/events-list.ts` are deleted, and so are their `check-copies` pins. Wispr Flow's
+  part of the RPC is `src/tools-rpc.ts`. The RPC id `wisprflow.meetings.tools`, its methods and their answers are
+  unchanged apart from `events_list`'s above, and `probe` is new.
+- For jelly: nothing to do. The declared tools, sign-in and settings are unchanged; `probe` is a tools RPC method, not
+  a tool, so it is not in `jelly.tools`. The default rules gain `wisprflow_probe` (allow) at every `access`.
+
 ## [0.0.2] - 2026-11-14
 
 ### Changed

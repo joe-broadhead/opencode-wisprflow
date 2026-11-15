@@ -2,21 +2,26 @@
 // lists newest first, pages with has_more and next_cursor, and answers JSON with UTC times, as Wispr Flow's live tool
 // does (5 November 2026). Every name, address and link is made up.
 import { describe, expect, test } from "bun:test"
+import { encodeBoundCursor, encodeCursor } from "@we-the-rebel-alliance/source-contract/cursor"
+import { EVENT_LIMITS, PAGE, assertEventsListConformance, probeResultProblems, resultProblems, type EventsListResult } from "@we-the-rebel-alliance/source-contract/events"
 import {
   ACCOUNT,
   EVENTS_ACTION,
   EVENTS_INPUT,
   EventsFailure,
+  MAX_BYTES,
+  PROBE_ACTION,
   SETTLE_MS,
   SOURCE,
   eventsMethod,
   listEvents,
+  probeMethod,
   readMeetingsPage,
   resultData,
   signedIn,
+  wisprflowProbe,
   type EventsContext,
 } from "../../src/events.js"
-import { EVENT_LIMITS, PAGE, assertEventsListConformance, encodeCursor, resultProblems, type EventsListResult } from "../../src/host/events-list.js"
 import { registerToolsRpc } from "@we-the-rebel-alliance/source-contract/tools-rpc"
 import { PLUGIN } from "../../src/tools-rpc.js"
 import { defaultRules, evaluate } from "../../src/permissions.js"
@@ -47,14 +52,18 @@ const MEETINGS: readonly Meeting[] = [
 ]
 const EXPECTED = ["w-01", "w-02", "w-03a", "w-03b", ...Array.from({ length: 5 }, (_, index) => `w-04-${index}`), "w-05"]
 
-/** search_meetings over MEETINGS, `pageSize` at a time whatever `limit` says. */
-function wisprflow(pageSize = 2) {
+const BINDING = { plugin: "wisprflow", source: SOURCE, account: ACCOUNT }
+/** One more meeting, whose title holds a password in a link: a secret the source refuses for good. */
+const SECRET: Meeting = { id: "w-04-9", title: "Logs at ftp://ops:Hb3nQ8vTk2@logs.example.org/launch", start_time: "2026-10-20T10:00:00Z", attendees: [] }
+
+/** search_meetings over the meetings, `pageSize` at a time whatever `limit` says. */
+function wisprflow(pageSize = 2, meetings: readonly Meeting[] = MEETINGS) {
   const calls: Record<string, unknown>[] = []
   const search = async (input: Record<string, unknown>) => {
     calls.push(input)
     const since = Date.parse(String(input.since))
     const until = Date.parse(String(input.until))
-    const matching = MEETINGS.filter((meeting) => Date.parse(meeting.start_time) >= since && Date.parse(meeting.start_time) < until)
+    const matching = meetings.filter((meeting) => Date.parse(meeting.start_time) >= since && Date.parse(meeting.start_time) < until)
       .sort((a, b) => Date.parse(b.start_time) - Date.parse(a.start_time))
     const offset = typeof input.cursor === "string" ? Number(input.cursor.replace(/^n-/, "")) : 0
     const page = matching.slice(offset, offset + pageSize).map((meeting) => ({ ...meeting, end_time: meeting.start_time, folders: null }))
@@ -99,18 +108,32 @@ describe("Wispr Flow's search_meetings result", () => {
 })
 
 describe("events_list", () => {
-  test("keeps the events_list contract over a synthetic Wispr Flow", async () => {
-    await assertEventsListConformance(list(), { source: SOURCE, account: ACCOUNT, owner: OWNER, since: SINCE, expected: EXPECTED, pageSize: 2 })
+  const fixtures = { source: SOURCE, account: ACCOUNT, owner: OWNER, since: SINCE, expected: EXPECTED, binding: { plugin: "wisprflow" }, codes: true, maxBytes: MAX_BYTES, kinds: ["meeting"], namespace: "wisprflow" }
+
+  test("keeps the events_list contract over a synthetic Wispr Flow, with the bound cursor and the table's codes", async () => {
+    await assertEventsListConformance(list(), { ...fixtures, pageSize: 2 })
   })
 
   test("keeps it with the source named and pages of one", async () => {
-    await assertEventsListConformance(list(wisprflow(1)), { source: SOURCE, sourceInput: true, since: SINCE, expected: EXPECTED, pageSize: 4 })
+    await assertEventsListConformance(list(wisprflow(1)), { ...fixtures, sourceInput: true, pageSize: 4 })
+  })
+
+  test("keeps it when a meeting holds a secret: refused for good, and the cursor moves past it", async () => {
+    await assertEventsListConformance(list(wisprflow(2, [...MEETINGS, SECRET])), { ...fixtures, refused: [SECRET.id], pageSize: 2 })
+    const result = (await list(wisprflow(2, [...MEETINGS, SECRET]))({ since: SINCE, limit: PAGE.max })) as EventsListResult
+    expect(result.refused).toEqual([{ external_id: SECRET.id, reason: "secret", detail: "holds a secret (connection string)" }])
+    expect(JSON.stringify(result)).not.toContain("Hb3nQ8vTk2")
+  })
+
+  test("names the plugin and when it read the page", async () => {
+    expect(await list()({ since: SINCE, limit: 1 })).toMatchObject({ plugin: "@joe-broadhead/opencode-wisprflow", asOf: new Date(NOW).toISOString() })
   })
 
   test("makes each meeting one event: attendees and a shared meeting's owner as actors, its share_link, and labels", async () => {
     const result = (await list()({ since: SINCE, limit: PAGE.max })) as EventsListResult
-    expect(resultProblems(result)).toEqual([])
+    expect(resultProblems(result, PAGE.max, MAX_BYTES)).toEqual([])
     expect(result).toMatchObject({ source: "wisprflow", account: "default", owner: OWNER, more: false, trust: "untrusted" })
+    expect(result.refused).toBeUndefined()
     expect(result.events[0]).toMatchObject({
       external_id: "w-01",
       kind: "meeting",
@@ -145,22 +168,54 @@ describe("events_list", () => {
     expect(fake.calls).toEqual([])
   })
 
-  test("refuses another sign-in's cursor, another source's, another account and another source", async () => {
+  test("refuses another sign-in's cursor and another account with ACCOUNT_MISMATCH, before any read", async () => {
     const first = (await list()({ since: SINCE, limit: 1 })) as EventsListResult
-    expect(await code(list(wisprflow(), NOW, { id: "wisprflow:credential:other", label: "Other" })({ cursor: first.cursor }))).toBe("EVENTS_CURSOR_INVALID")
-    expect(await code(list()({ cursor: encodeCursor("granola", {}) }))).toBe("EVENTS_CURSOR_INVALID")
-    expect(await code(list()({ account: "work" }))).toBe("EVENTS_ACCOUNT_UNKNOWN")
-    expect(await code(list()({ source: "granola" }))).toBe("EVENTS_SOURCE_UNKNOWN")
-    expect(await code(list()({ limit: 0 }))).toBe("EVENTS_INVALID_INPUT")
-    expect(await code(listEvents(wisprflow().search, undefined, {}, NOW))).toBe("EVENTS_OWNER_UNKNOWN")
+    const fake = wisprflow()
+    expect(await code(list(fake, NOW, { id: "wisprflow:credential:other", label: "Other" })({ account: ACCOUNT, cursor: first.cursor }))).toBe("ACCOUNT_MISMATCH")
+    expect(await code(list(fake)({ account: "work" }))).toBe("ACCOUNT_MISMATCH")
+    expect(await code(list(fake)({ account: "work", cursor: first.cursor }))).toBe("ACCOUNT_MISMATCH")
+    expect(fake.calls).toEqual([])
   })
 
-  test("stops with EVENTS_READ_FAILED when Wispr Flow caps a week", async () => {
-    expect(await code(listEvents(async () => ({ meetings: [], has_more: false, truncated: true }), OWNER, { since: SINCE }, NOW))).toBe("EVENTS_READ_FAILED")
+  test("refuses a cursor it did not issue, an earlier version's included, and one passed without its account, before any read", async () => {
+    const first = (await list()({ since: SINCE, limit: 1 })) as EventsListResult
+    const fake = wisprflow()
+    const refused = (cursor: string) => code(list(fake)({ account: ACCOUNT, cursor }))
+    expect(await refused("not-a-cursor")).toBe("CURSOR_INVALID")
+    expect(await refused(encodeBoundCursor({ ...BINDING, plugin: "granola" }, { o: "0123456789abcdef", t: 0, i: "" }))).toBe("CURSOR_INVALID")
+    expect(await refused(encodeBoundCursor({ ...BINDING, source: "meetings" }, { o: "0123456789abcdef", t: 0, i: "" }))).toBe("CURSOR_INVALID")
+    expect(await refused(encodeBoundCursor(BINDING, { o: "not-a-digest", t: 0, i: "" }))).toBe("CURSOR_INVALID")
+    expect(await refused(encodeBoundCursor(BINDING, { o: "0123456789abcdef", t: "soon", i: "" }))).toBe("CURSOR_INVALID")
+    expect(await refused(encodeCursor(SOURCE, { a: ACCOUNT, o: "0123456789abcdef", t: 0, i: "" }))).toBe("CURSOR_INVALID")
+    expect(await code(list(fake)({ cursor: first.cursor }))).toBe("INPUT_INVALID")
+    expect(fake.calls).toEqual([])
   })
 
-  test("is allowed by the default rules", () => {
-    expect(evaluate([{ action: "*", resource: "*", effect: "allow" }, ...defaultRules()], EVENTS_ACTION)).toBe("allow")
+  test("refuses another source, a malformed input, a scope, and a listing with no sign-in", async () => {
+    expect(await code(list()({ source: "granola" }))).toBe("SOURCE_UNKNOWN")
+    expect(await code(list()({ limit: 0 }))).toBe("INPUT_INVALID")
+    expect(await code(list()({ scope: { folders: ["x"] } }))).toBe("INPUT_INVALID")
+    expect(await code(listEvents(wisprflow().search, undefined, {}, NOW))).toBe("NEEDS_SIGN_IN")
+  })
+
+  test("keeps two sign-ins' overlapping listings apart: each page is its own owner's, and a cursor never crosses", async () => {
+    const other = { id: "wisprflow:credential:cred-2", label: "Wispr Flow" }
+    const [mine, theirs] = (await Promise.all([list()({ since: SINCE, limit: 2 }), list(wisprflow(), NOW, other)({ since: SINCE, limit: 2 })])) as EventsListResult[]
+    expect(mine!.owner).toEqual(OWNER)
+    expect(theirs!.owner).toEqual(other)
+    const [next, crossed] = await Promise.all([list()({ account: ACCOUNT, cursor: mine!.cursor, limit: 2 }), code(list(wisprflow(), NOW, other)({ account: ACCOUNT, cursor: mine!.cursor }))])
+    expect((next as EventsListResult).events.map((event) => event.external_id)).toEqual(EXPECTED.slice(2, 4))
+    expect(crossed).toBe("ACCOUNT_MISMATCH")
+  })
+
+  test("stops with UNAVAILABLE when Wispr Flow caps a week", async () => {
+    expect(await code(listEvents(async () => ({ meetings: [], has_more: false, truncated: true }), OWNER, { since: SINCE }, NOW))).toBe("UNAVAILABLE")
+  })
+
+  test("is allowed by the default rules, and so is probe, at every access", () => {
+    for (const access of ["all", "ask-changes", "read-only"] as const) {
+      for (const action of [EVENTS_ACTION, PROBE_ACTION]) expect(evaluate([{ action: "*", resource: "*", effect: "allow" }, ...defaultRules(access)], action)).toBe("allow")
+    }
     expect(EVENTS_INPUT.properties.cursor.maxLength).toBe(EVENT_LIMITS.cursor)
     expect([EVENTS_INPUT.properties.limit.minimum, EVENTS_INPUT.properties.limit.maximum]).toEqual([PAGE.min, PAGE.max])
   })
@@ -189,7 +244,23 @@ describe("the owner", () => {
   })
 })
 
-describe("the tools RPC's events_list", () => {
+describe("probe", () => {
+  test("names OpenCode's sign-in as the owner every page names, and reads nothing", async () => {
+    const page = (await list()({ since: SINCE, limit: 1 })) as EventsListResult
+    const result = wisprflowProbe(OWNER, {})
+    expect(probeResultProblems(result, { source: SOURCE, account: ACCOUNT })).toEqual([])
+    expect(result).toEqual({ source: SOURCE, account: ACCOUNT, owner: page.owner, trust: "untrusted" })
+  })
+
+  test("refuses another account, another source, a malformed input and no sign-in", async () => {
+    expect(await code(Promise.resolve().then(() => wisprflowProbe(OWNER, { account: "work" })))).toBe("ACCOUNT_MISMATCH")
+    expect(await code(Promise.resolve().then(() => wisprflowProbe(OWNER, { source: "granola" })))).toBe("SOURCE_UNKNOWN")
+    expect(await code(Promise.resolve().then(() => wisprflowProbe(OWNER, { since: SINCE })))).toBe("INPUT_INVALID")
+    expect(await code(Promise.resolve().then(() => wisprflowProbe(undefined, {})))).toBe("NEEDS_SIGN_IN")
+  })
+})
+
+describe("the tools RPC's events_list and probe", () => {
   async function rpc(managed = true) {
     const { ctx, asserted } = context()
     let handlers: Record<string, (input: unknown, context: unknown) => Promise<unknown>> = {}
@@ -200,9 +271,13 @@ describe("the tools RPC's events_list", () => {
       session: { get: async ({ sessionID }: { sessionID: string }) => ({ id: sessionID, agent: "build", location: { directory: "/fixture/project" } }) },
       agent: { get: async () => ({ data: { permissions: [{ action: "*", resource: "*", effect: "allow" }, ...defaultRules()] } }) },
     }
-    await registerToolsRpc(host as never, { plugin: PLUGIN, methods: [eventsMethod(ctx, () => managed, () => NOW)], mcp: { server: "wisprflow", managed: () => managed } })
+    await registerToolsRpc(host as never, { plugin: PLUGIN, methods: [eventsMethod(ctx, () => managed, () => NOW), probeMethod(ctx, () => managed)], mcp: { server: "wisprflow", managed: () => managed } })
     const rpcContext = { signal: new AbortController().signal, error: (type: string, message: string, data?: unknown) => ({ type, message, data }) }
-    return { asserted, run: (input: unknown) => handlers.events_list!({ sessionID: "ses_1", input }, rpcContext) }
+    return {
+      asserted,
+      run: (input: unknown) => handlers.events_list!({ sessionID: "ses_1", input }, rpcContext),
+      probe: (input: unknown) => handlers.probe!({ sessionID: "ses_1", input }, rpcContext),
+    }
   }
 
   test("asserts wisprflow_events_list, reads through search_meetings and keeps the contract", async () => {
@@ -212,12 +287,20 @@ describe("the tools RPC's events_list", () => {
       if (result.type === "failed") throw new Error(String(result.message))
       return result
     }
-    await assertEventsListConformance(list, { source: SOURCE, account: ACCOUNT, owner: OWNER, since: SINCE, expected: EXPECTED })
+    await assertEventsListConformance(list, { source: SOURCE, account: ACCOUNT, owner: OWNER, since: SINCE, expected: EXPECTED, binding: { plugin: "wisprflow" }, codes: true, maxBytes: MAX_BYTES })
     expect(asserted.every((request) => request.action === EVENTS_ACTION)).toBe(true)
   })
 
+  test("probe asserts wisprflow_probe alone and answers the sign-in", async () => {
+    const { probe, asserted } = await rpc()
+    expect(await probe({})).toEqual({ source: SOURCE, account: ACCOUNT, owner: OWNER, trust: "untrusted" })
+    expect(asserted.map((request) => request.action)).toEqual([PROBE_ACTION])
+    expect(await probe({ account: "work" })).toMatchObject({ type: "failed", data: { code: "ACCOUNT_MISMATCH" } })
+    expect(await (await rpc(false)).probe({})).toMatchObject({ type: "failed", data: { code: "UNAVAILABLE" } })
+  })
+
   test("gives a script its code and next step, and refuses beside someone else's wisprflow server", async () => {
-    expect(await (await rpc()).run({ cursor: "not-a-cursor" })).toMatchObject({ type: "failed", data: { code: "EVENTS_CURSOR_INVALID", next: expect.stringContaining("since") } })
-    expect(await (await rpc(false)).run({})).toMatchObject({ type: "failed", data: { code: "EVENTS_UNAVAILABLE" } })
+    expect(await (await rpc()).run({ account: ACCOUNT, cursor: "not-a-cursor" })).toMatchObject({ type: "failed", data: { code: "CURSOR_INVALID", next: expect.stringContaining("since") } })
+    expect(await (await rpc(false)).run({})).toMatchObject({ type: "failed", data: { code: "UNAVAILABLE" } })
   })
 })

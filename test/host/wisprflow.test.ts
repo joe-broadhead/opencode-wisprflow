@@ -470,7 +470,7 @@ describe("the /connect entry", () => {
     expect((await entry())?.name).toBe("Wispr Flow")
   })
 
-  test("events_list is a tools RPC method beside the known reads, run as the session, with its own codes", async () => {
+  test("events_list and probe are tools RPC methods beside the known reads, run as the session, with the contract's codes", async () => {
     const build = await session(host)
     const call = async (method: string, input: unknown) => {
       try {
@@ -481,11 +481,16 @@ describe("the /connect entry", () => {
       }
     }
     const described = await call("describe", {})
-    expect(described.value?.methods.at(-1)).toMatchObject({ name: "events_list", kind: "plugin", action: "wisprflow_events_list" })
+    expect(described.value?.methods.slice(-2)).toMatchObject([
+      { name: "events_list", kind: "plugin", action: "wisprflow_events_list" },
+      { name: "probe", kind: "plugin", action: "wisprflow_probe" },
+    ])
     // This host signs in to the fake with no credential, so there is no sign-in to name as the owner.
     const before = host.fake.calls.length
-    expect(await call("events_list", { sessionID: build, input: { since: "2026-10-01" } })).toEqual({ type: "failed", code: "EVENTS_OWNER_UNKNOWN" })
-    expect(await call("events_list", { sessionID: build, input: { cursor: "not-a-cursor" } })).toEqual({ type: "failed", code: "EVENTS_CURSOR_INVALID" })
+    expect(await call("events_list", { sessionID: build, input: { since: "2026-10-01" } })).toEqual({ type: "failed", code: "NEEDS_SIGN_IN" })
+    expect(await call("probe", { sessionID: build, input: {} })).toEqual({ type: "failed", code: "NEEDS_SIGN_IN" })
+    expect(await call("events_list", { sessionID: build, input: { account: "default", cursor: "not-a-cursor" } })).toEqual({ type: "failed", code: "CURSOR_INVALID" })
+    expect(await call("events_list", { sessionID: build, input: { cursor: "not-a-cursor" } })).toEqual({ type: "failed", code: "INPUT_INVALID" })
     expect(host.fake.calls.slice(before)).toEqual([])
   })
 })

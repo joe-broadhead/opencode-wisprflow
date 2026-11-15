@@ -40,6 +40,12 @@ export const PERSONAL_TOOLS: readonly string[] = ["get_participant_contacts"]
  */
 export const PLUGIN_READS: readonly string[] = ["events_list"]
 
+/**
+ * The plugin's own reads that are tools RPC methods only, never a tool: probe, who is signed in, for a consumer binding
+ * the meetings source. Its action, wisprflow_probe, is allowed like the reads.
+ */
+export const PLUGIN_METHODS: readonly string[] = ["probe"]
+
 /** Known writes: none today. A tool Wispr Flow adds later is unknown, and the default block's `wisprflow_*` rule decides it. */
 export const WRITE_TOOLS: readonly string[] = []
 

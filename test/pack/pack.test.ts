@@ -321,9 +321,12 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
   test("describes every known tool, each a read and available with its live schema", async () => {
     const { value } = await script("describe", {})
     expect(value.id).toBe(TOOLS_RPC_ID)
-    expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...METHODS.map((method) => method.name), "events_list"])
-    expect(value.methods.at(-1)).toMatchObject({ name: "events_list", kind: "plugin", action: "wisprflow_events_list", available: true })
-    for (const method of value.methods.slice(0, -1)) {
+    expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...METHODS.map((method) => method.name), "events_list", "probe"])
+    expect(value.methods.slice(-2)).toMatchObject([
+      { name: "events_list", kind: "plugin", action: "wisprflow_events_list", available: true },
+      { name: "probe", kind: "plugin", action: "wisprflow_probe", available: true },
+    ])
+    for (const method of value.methods.slice(0, -2)) {
       expect({ name: method.name, kind: method.kind, class: method.class, action: method.action, available: method.available }).toEqual({
         name: method.name,
         kind: "mcp",
@@ -337,10 +340,11 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
 
   test("describe with a session reports each method's permission: every tool allows by default", async () => {
     const { value } = await script("describe", { sessionID: sessions.build })
-    // METHODS are the known tools; the plugin's own events_list is a read the default rules allow too.
+    // METHODS are the known tools; the plugin's own events_list and probe are reads the default rules allow too.
     expect(Object.fromEntries(value.methods.map((method: { name: string; permission: string }) => [method.name, method.permission]))).toEqual({
       ...Object.fromEntries(METHODS.map((method) => [method.name, "allow"])),
       events_list: "allow",
+      probe: "allow",
     })
   })
 

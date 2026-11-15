@@ -66,6 +66,38 @@
       "domain": "wisprflow.ai"
     }
   },
+  "sources": {
+    "contractVersion": 1,
+    "rpc": "wisprflow.meetings.tools",
+    "probe": {
+      "action": "wisprflow_probe"
+    },
+    "items": [
+      {
+        "id": "wisprflow.meetings",
+        "kind": "events",
+        "reads": "meeting",
+        "tool": "events_list",
+        "input": {
+          "source": "wisprflow"
+        },
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "events": "wisprflow_events_list",
+          "operations": [
+            "search_meetings"
+          ]
+        },
+        "private": true,
+        "cost": {
+          "class": "free"
+        },
+        "maxBytes": 65536
+      }
+    ]
+  },
   "scripts": {
     "check": "node scripts/check.mjs",
     "typecheck": "node scripts/check.mjs typecheck",

@@ -15,8 +15,7 @@ All notable changes to this project are documented here. The format follows [Kee
   declaration from the installed package, with the contract's `descriptor`.
 - For Memory and jelly: the tools RPC method `probe` (action `wisprflow_probe`, allowed by the default rules at every
   `access`) answers `{ source, account: "default", owner, trust }`, the owner being OpenCode's sign-in exactly as every
-  page names it (`mailto:` and the label when it is an email, otherwise `wisprflow:credential:` and the credential's
-  id). It calls Wispr Flow for nothing, and refuses another account with `ACCOUNT_MISMATCH`.
+  page names it. It calls Wispr Flow for nothing, and refuses another account with `ACCOUNT_MISMATCH`.
 - A page also carries `plugin`, `asOf` and `refused[]`: a meeting whose title or summary holds a secret is refused for
   good with `reason: "secret"`, and the cursor moves past it.
 - `npm run check` runs the contract's conformance kit over the declared source (the new `conformance` stage, in CI
@@ -29,10 +28,15 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - For Memory, required input: a call with a `cursor` names `account` (`default`, as `probe` answers it); without it
   the call is refused with `INPUT_INVALID`. A first listing may still leave `account` out.
+- For Memory, the owner is unverified (OpenCode's sign-in, not a Wispr Flow identity), and its id is now always
+  `wisprflow:credential:` and the credential's id, also when the sign-in's label is an email (it was `mailto:` and the
+  label then). The label is the owner's label, for display only: a label does not identify a connection and can be
+  renamed, and renaming it no longer changes the owner or breaks a cursor. Every new sign-in changes the owner, so its
+  cursors restart (`ACCOUNT_MISMATCH`: call `probe`, then start again). This is also what `$me` resolves to.
 - For Memory, a cursor restart: the cursor is the contract's bound cursor (plugin `wisprflow`, source `wisprflow`,
   account `default`). A cursor an earlier version issued is refused with `CURSOR_INVALID`; start again with `since`. A
   cursor from another sign-in is now `ACCOUNT_MISMATCH` (was `EVENTS_CURSOR_INVALID`), before any read: call `probe`,
-  then start again. The account (`default`) and the owner are unchanged.
+  then start again. The account (`default`) is unchanged.
 - The error codes of `events_list` are the source contract's: `INPUT_INVALID`, `CURSOR_INVALID`, `ACCOUNT_MISMATCH`,
   `SOURCE_UNKNOWN`, `NEEDS_SIGN_IN` (no sign-in to name as the owner) and `UNAVAILABLE` (the server cannot be called,
   or Wispr Flow's own failure) replace `EVENTS_INVALID_INPUT`, `EVENTS_CURSOR_INVALID`, `EVENTS_ACCOUNT_UNKNOWN`,
@@ -42,8 +46,12 @@ All notable changes to this project are documented here. The format follows [Kee
   `src/host/tools-rpc.ts` and `src/host/events-list.ts` are deleted, and so are their `check-copies` pins. Wispr Flow's
   part of the RPC is `src/tools-rpc.ts`. The RPC id `wisprflow.meetings.tools`, its methods and their answers are
   unchanged apart from `events_list`'s above, and `probe` is new.
-- For jelly: nothing to do. The declared tools, sign-in and settings are unchanged; `probe` is a tools RPC method, not
-  a tool, so it is not in `jelly.tools`. The default rules gain `wisprflow_probe` (allow) at every `access`.
+- For jelly: the declared tools, sign-in and settings are unchanged; `probe` is a tools RPC method, not a tool, so it
+  is not in `jelly.tools`, and the default rules gain `wisprflow_probe` (allow) at every `access`. Jelly does not see
+  the source yet: its broker on master reads `sources` with its own check (`backend/host/src/sources/contract.ts`,
+  `readItem`), which drops an item whose `permission.events` is not dotted, such as `wisprflow_events_list`, the
+  contract's form for an MCP-backed source. Jelly sees `wisprflow.meetings` once it reads declarations through the
+  source contract package (`descriptor`).
 
 ## [0.0.2] - 2026-11-14
 

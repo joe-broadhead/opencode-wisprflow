@@ -335,8 +335,9 @@ meeting is listed once it started 2 hours ago, so its notes are most likely done
 last meeting listed: calling again with it lists what follows, and an older cursor lists the same meetings again.
 
 Wispr Flow has no tool that names the signed-in account, so the owner, on every page and in `probe` alike, is
-OpenCode's sign-in for the `wisprflow` server: `mailto:` and its label when the label is an email, otherwise its
-credential's id, which a new sign-in changes. `probe` asserts `wisprflow_probe` and reads only that sign-in: it calls
+OpenCode's sign-in for the `wisprflow` server, unverified (OpenCode's sign-in, not a Wispr Flow identity): its id is
+always `wisprflow:credential:` and the credential's id, which a new sign-in changes, and its label, for display only,
+the credential's label. Renaming the label changes neither the owner nor a cursor. `probe` asserts `wisprflow_probe` and reads only that sign-in: it calls
 Wispr Flow for nothing. The cursor is bound to the plugin, the source and the account, and holds a digest of the
 owner: a cursor from another sign-in is refused with `ACCOUNT_MISMATCH` before any read (call `probe`, then start
 again with `since`), and one this source did not issue, an earlier version's included, with `CURSOR_INVALID`.

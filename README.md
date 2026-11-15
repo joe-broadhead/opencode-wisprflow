@@ -5,6 +5,8 @@ Wispr Flow's official MCP server.
 
 Unofficial; not affiliated with Wispr Flow.
 
+Wispr Flow is a trademark of Wispr AI, Inc.; this unofficial plugin is not endorsed by them.
+
 ## Requirements
 
 - OpenCode `>=2.2.3 <2.4.0`, tested on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0. Outside that range the plugin does not start, unless

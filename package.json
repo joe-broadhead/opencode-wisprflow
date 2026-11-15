@@ -63,7 +63,8 @@
     "vendor": {
       "id": "wisprflow",
       "name": "Wispr Flow",
-      "domain": "wisprflow.ai"
+      "domain": "wisprflow.ai",
+      "mark": true
     }
   },
   "sources": {

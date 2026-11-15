@@ -28,7 +28,8 @@ import { defaultRules, evaluate } from "../../src/permissions.js"
 
 const NOW = Date.parse("2026-11-08T12:00:00Z")
 const SINCE = "2026-09-28"
-const OWNER = { id: "mailto:ada@example.test", label: "Ada@Example.test" }
+/** OpenCode's sign-in: the credential's id, labelled with its label (an email here, which never becomes the id). */
+const OWNER = { id: "wisprflow:credential:cred-1", label: "Ada@Example.test" }
 
 interface Meeting {
   readonly id: string
@@ -236,11 +237,20 @@ function context(label = "Ada@Example.test", search = wisprflow().search) {
 }
 
 describe("the owner", () => {
-  test("is the sign-in's email, or else its credential", async () => {
+  test("is always the sign-in's credential id, with its label for display only, an email label included", async () => {
     expect(await signedIn(context().ctx)).toEqual(OWNER)
     expect(await signedIn(context("Wispr Flow").ctx)).toEqual({ id: "wisprflow:credential:cred-1", label: "Wispr Flow" })
+    expect(await signedIn(context("").ctx)).toEqual({ id: "wisprflow:credential:cred-1", label: "Wispr Flow sign-in" })
     const none = { mcp: { list: async () => ({ data: [{ name: "wisprflow", status: { status: "connected" } }] }) }, integration: { connection: { active: async () => undefined } } }
     expect(await signedIn(none as never)).toBeUndefined()
+  })
+
+  test("renaming the sign-in's label keeps the owner's id, so a cursor still reads", async () => {
+    const first = (await list(wisprflow(), NOW, (await signedIn(context("Ada@Example.test").ctx))!)({ since: SINCE, limit: 1 })) as EventsListResult
+    const renamed = (await signedIn(context("Work account").ctx))!
+    expect(renamed.id).toBe(OWNER.id)
+    const next = (await list(wisprflow(), NOW, renamed)({ account: ACCOUNT, cursor: first.cursor, limit: 1 })) as EventsListResult
+    expect(next.events.map((event) => event.external_id)).toEqual(EXPECTED.slice(1, 2))
   })
 })
 

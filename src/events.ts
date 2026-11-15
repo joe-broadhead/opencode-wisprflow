@@ -29,8 +29,9 @@ import { reasonOf, shortReason } from "./redact.js"
  * times, every page while `has_more`. It never reads contacts, transcripts or notes.
  *
  * Wispr Flow has no tool that names the signed-in account, so the owner, in every page and in `probe` alike, is
- * OpenCode's sign-in for the wisprflow server: its label as `mailto:` when it is an email, otherwise the credential's
- * own id, which a new sign-in changes. `probe` reads only that, and calls Wispr Flow for nothing. The cursor is bound to
+ * OpenCode's sign-in for the wisprflow server, unverified: its id is always the credential's own id, which a new sign-in
+ * changes, and its label, for display only, the credential's label. A label does not identify a connection and can be
+ * renamed, so it never becomes the id. `probe` reads only that, and calls Wispr Flow for nothing. The cursor is bound to
  * the plugin, the source and the account, and holds the (start, id) of the last meeting listed with a digest of the
  * owner, so a cursor from another sign-in is ACCOUNT_MISMATCH before any read. A meeting is listed once it started
  * SETTLE_MS ago, when its notes are most likely done; one whose title or summary holds a secret is refused for good.
@@ -255,16 +256,17 @@ export function readMeetingsPage(data: unknown): MeetingsPage {
   return { meetings, ...(more && next ? { next } : {}), more, truncated: page["truncated"] === true }
 }
 
-/** OpenCode's sign-in for the wisprflow server, from its integration's active credential. */
+/**
+ * OpenCode's sign-in for the wisprflow server, from its integration's active credential: the id is always
+ * `wisprflow:credential:` and the credential's id, and the label, for display only, the credential's label.
+ */
 export async function signedIn(ctx: Pick<EventsContext, "mcp" | "integration">): Promise<EventsOwner | undefined> {
   const server = (await ctx.mcp.list()).data.find((entry) => entry.name === SERVER_NAME)
   const connection = server?.integrationID ? await ctx.integration.connection.active(server.integrationID).catch(() => undefined) : undefined
   if (connection?.type !== "credential") return undefined
-  const label = connection.label.replace(/[\u0000-\u001f\u007f]+/g, " ").trim()
-  const email = label.toLowerCase()
-  if (/^[^\s@]+@[^\s@]+$/.test(email)) return { id: `mailto:${email}`, label }
   const id = String(connection.id).trim()
   if (!id) return undefined
+  const label = connection.label.replace(/[\u0000-\u001f\u007f]+/g, " ").trim()
   return { id: `wisprflow:credential:${encodeURIComponent(id)}`, label: label || "Wispr Flow sign-in" }
 }
 

@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { PERSONAL_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
+import { PERSONAL_TOOLS, PLUGIN_METHODS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 import { TESTED_HOSTS } from "../../src/constants.js"
 import { defaultRules } from "../../src/permissions.js"
 import { LIVE } from "./wisprflow-catalog.js"
@@ -27,9 +27,9 @@ describe("docs", () => {
     expect(writes.filter((count) => count !== WRITE_TOOLS.length)).toEqual([])
   })
 
-  test.each(FILES)("%s names only Wispr Flow tools the plugin knows", (file) => {
+  test.each(FILES)("%s names only Wispr Flow tools and plugin reads the plugin knows", (file) => {
     const named = [...text(file).matchAll(/\bwisprflow_([a-z][a-z_]*)(?![\w*])/g)].map((match) => match[1]!)
-    expect(named.filter((tool) => ![...READ_TOOLS, ...PLUGIN_READS, ...PERSONAL_TOOLS, ...WRITE_TOOLS].includes(tool))).toEqual([])
+    expect(named.filter((tool) => ![...READ_TOOLS, ...PLUGIN_READS, ...PLUGIN_METHODS, ...PERSONAL_TOOLS, ...WRITE_TOOLS].includes(tool))).toEqual([])
   })
 
   // S5: version numbers live in package.json and the CHANGELOG heading only, and nothing says the package is unreleased.

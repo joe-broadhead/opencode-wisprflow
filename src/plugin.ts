@@ -1,8 +1,9 @@
 import { Plugin, type Mcp } from "@opencode/plugin"
 import { errorText, NAMESPACE_DESCRIPTION, PLUGIN_ID, SERVER_NAME } from "./constants.js"
-import { eventsMethod, registerEvents } from "./events.js"
+import { eventsMethod, probeMethod, registerEvents } from "./events.js"
 import { checkHost } from "./host-version.js"
-import { METHODS, registerToolsRpc } from "./host/tools-rpc.js"
+import { registerToolsRpc } from "@we-the-rebel-alliance/source-contract/tools-rpc"
+import { METHODS, PLUGIN } from "./tools-rpc.js"
 import { watchIntegration } from "./integration.js"
 import { parseOptions } from "./options.js"
 import { reasonOf } from "./redact.js"
@@ -103,7 +104,8 @@ export function createWisprflowPlugin(seam: WisprflowSeam) {
       await ctx.tool.transform((editor) => {
         if (source?.type !== "conflict") editor.namespace({ name: SERVER_NAME, description: NAMESPACE_DESCRIPTION })
       })
-      // events_list, Memory's source of meetings, reads through the server's search_meetings; not beside someone else's.
+      // events_list, the meetings source's listing (package.json's `sources`), reads through the server's search_meetings;
+      // not beside someone else's. probe, its other read, is a tools RPC method only.
       const ours = () => source?.type !== "conflict"
       await registerEvents(ctx, ours)
       await registerDefaultRules(ctx.agent, defaultRules(options.access), report("rules"))
@@ -116,7 +118,7 @@ export function createWisprflowPlugin(seam: WisprflowSeam) {
       await registerStatusRpc(ctx.rpc, read)
       // Scripts call the known reads with no model, as a session and its agent.
       // Only a conflict is someone else's server; a server that isn't registered is NOT_REGISTERED, not a conflict.
-      const stopTools = await registerToolsRpc(ctx, { methods: [...METHODS, eventsMethod(ctx, ours)], mcp: { server: SERVER_NAME, managed: ours } })
+      const stopTools = await registerToolsRpc(ctx as never, { plugin: PLUGIN, methods: [...METHODS, eventsMethod(ctx, ours), probeMethod(ctx, ours)], mcp: { server: SERVER_NAME, managed: ours } })
       const stopWatch = watchIntegration(ctx, owned)
       return async () => {
         await stopWatch()

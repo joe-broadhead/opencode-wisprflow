@@ -4,7 +4,7 @@ Every option is optional. The smallest setup is one entry in `plugins`:
 
 ```json
 {
-  "plugins": ["github:joe-broadhead/opencode-wisprflow#v0.0.2"]
+  "plugins": ["github:joe-broadhead/opencode-wisprflow#v0.0.3"]
 }
 ```
 
@@ -12,7 +12,7 @@ To set options, use the object form:
 
 ```json
 {
-  "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.2", "options": { "allowUntestedHost": true } }]
+  "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.3", "options": { "allowUntestedHost": true } }]
 }
 ```
 
@@ -117,6 +117,7 @@ resource `*`. The plugin adds the rules for the `access` option to every agent t
   { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_scratchpad_notes", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_events_list", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_probe", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "allow" }
 ]
 ```
@@ -142,6 +143,7 @@ resource `*`. The plugin adds the rules for the `access` option to every agent t
   { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_scratchpad_notes", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_events_list", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_probe", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "allow" }
 ]
 ```
@@ -167,6 +169,7 @@ resource `*`. The plugin adds the rules for the `access` option to every agent t
   { "action": "wisprflow_search_meetings", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_search_scratchpad_notes", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_events_list", "resource": "*", "effect": "allow" },
+  { "action": "wisprflow_probe", "resource": "*", "effect": "allow" },
   { "action": "wisprflow_get_participant_contacts", "resource": "*", "effect": "allow" }
 ]
 ```
@@ -257,6 +260,7 @@ own:
         {"action":"wisprflow_search_meetings","resource":"*","effect":"allow"},
         {"action":"wisprflow_search_scratchpad_notes","resource":"*","effect":"allow"},
         {"action":"wisprflow_events_list","resource":"*","effect":"allow"},
+        {"action":"wisprflow_probe","resource":"*","effect":"allow"},
         {"action":"wisprflow_get_participant_contacts","resource":"*","effect":"allow"}
       ]
     }
@@ -278,18 +282,17 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | `SKILLS_INVALID` | Setup: a skill file is missing or broken. The plugin still starts; status shows the problem. | Reinstall the plugin. |
 | `SERVER_NOT_REGISTERED` | Setup: the `wisprflow` server could not be registered. Status shows the problem. | Restart OpenCode. |
 | `RULES_NOT_ADDED` | Setup: the default permission rules could not be added, so Wispr Flow tools may run without asking. Status shows the problem. | Restart OpenCode. |
-| `EVENTS_INVALID_INPUT` | `events_list`: the input breaks the shared contract. | Pass only since, cursor, limit (1 to 500), account and source, as the tool's schema describes. |
-| `EVENTS_CURSOR_INVALID` | `events_list`: the cursor was not issued by Wispr Flow's events_list for this sign-in. | Pass a cursor from a previous result of the same account, or start again with since. |
-| `EVENTS_ACCOUNT_UNKNOWN` | `events_list`: an account other than `default`. | Leave account out, or pass "default". |
-| `EVENTS_SOURCE_UNKNOWN` | `events_list`: a source other than `wisprflow`. | Leave source out, or pass "wisprflow". |
-| `EVENTS_OWNER_UNKNOWN` | `events_list`: OpenCode holds no Wispr Flow sign-in to name as the owner. | Run /connect and choose Wispr Flow to sign in, then call events_list again. |
-| `EVENTS_UNAVAILABLE` | `events_list`: `wisprflow_search_meetings` is not available, because the server is not connected or signed in, or the `wisprflow` name is another server's. | Run /wisprflow-status and follow its next step. |
-| `EVENTS_READ_FAILED` | `events_list`: Wispr Flow's `search_meetings` failed, or capped one week's meetings. The message holds the first line of Wispr Flow's text, cut and redacted. | Call events_list again with the same cursor; if it keeps failing, run /wisprflow-status. |
+| `INPUT_INVALID` | `events_list` or `probe`: the input breaks the shared contract, or a cursor comes without its account. | Pass account "default" with a cursor, and only since, cursor, limit (1 to 500), account and source, as the tool's schema describes. |
+| `CURSOR_INVALID` | `events_list`: the cursor was not issued by Wispr Flow's events_list, an earlier version's included. | Pass a cursor from a previous result for the same account, or start again with since. |
+| `ACCOUNT_MISMATCH` | `events_list` or `probe`: an account other than `default`, or a cursor issued for another Wispr Flow sign-in than the one OpenCode holds now. | Pass account "default"; after a new sign-in, call probe and start again with since. |
+| `SOURCE_UNKNOWN` | `events_list` or `probe`: a source other than `wisprflow`. | Leave source out, or pass "wisprflow". |
+| `NEEDS_SIGN_IN` | `events_list` or `probe`: OpenCode holds no Wispr Flow sign-in to name as the owner. | Run /connect and choose Wispr Flow to sign in, then call probe and start again with since. |
+| `UNAVAILABLE` | `events_list` or `probe`: `wisprflow_search_meetings` is not available (the server is not connected or signed in, or the `wisprflow` name is another server's), or Wispr Flow's `search_meetings` failed or capped one week's meetings. The message holds the first line of Wispr Flow's text, cut and redacted. | Run /wisprflow-status and follow its next step, or call events_list again with the same cursor. |
 
 For example:
 
 ```text
-OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the default), found "yes". Next step: Fix the plugin options in opencode.json, for example "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.2", "options": { "allowUntestedHost": true } }].
+OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the default), found "yes". Next step: Fix the plugin options in opencode.json, for example "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.3", "options": { "allowUntestedHost": true } }].
 ```
 
 Errors from Wispr Flow's server and from OpenCode pass through unchanged, except in the tools RPC for scripts, whose
@@ -298,22 +301,26 @@ this feature." or "Too many requests", are listed in the README's Troubleshootin
 
 ## Events list
 
-`wisprflow_events_list` (`tools.wisprflow.events_list` in Code Mode, and the tools RPC method `events_list`) is
-Wispr Flow's side of Memory's sources funnel: the shared `events_list` contract, `src/host/events-list.ts`, which
-every source plugin carries unchanged. It lists the meetings Wispr Flow captured since a cursor, as normalised events,
-oldest first. It only reads, never asks and calls no model, so Memory's collector can run it unattended.
+`package.json`'s `sources` declares one source under source-contract version 1, `wisprflow.meetings`
+(`@we-the-rebel-alliance/source-contract`): `wisprflow_events_list` (`tools.wisprflow.events_list` in Code Mode, and
+the tools RPC method `events_list`) lists the meetings Wispr Flow captured since a cursor, as normalised events, oldest
+first, and the tools RPC method `probe` names who is signed in. Both only read, never ask and call no model, so a
+consumer such as Memory's collector can run them unattended.
 
 ```
+probe({ source?, account? })
+  → { source: "wisprflow", account: "default", owner: { id, label }, trust: "untrusted" }
+
 events_list({ since?, cursor?, limit?, account?, source? })
-  → { source: "wisprflow", account: "default", owner: { id, label }, events, cursor, more, trust: "untrusted" }
+  → { source: "wisprflow", account: "default", owner: { id, label }, events, cursor, more, refused?, plugin, asOf, trust: "untrusted" }
 ```
 
 | Input | Meaning |
 | --- | --- |
 | `since` | Where to start without a cursor: an ISO date (a UTC day) or date-time with `Z` or an offset. Default: 24 hours ago. |
-| `cursor` | The previous result's cursor. It wins over `since`. |
-| `limit` | Most events, 1 to 500; 100 by default. A result also stops before 900,000 bytes of JSON. |
-| `account` | `default`, Wispr Flow's one account. |
+| `cursor` | The previous result's cursor. It wins over `since`, and needs `account`. |
+| `limit` | Most events, 1 to 500; 100 by default. A result also stops before 64 KiB of JSON. |
+| `account` | `default`, Wispr Flow's one account, as `probe` names it. Required with a cursor. |
 | `source` | `wisprflow`, the one source. |
 
 It asserts `wisprflow_events_list`, then reads through OpenCode's own `wisprflow_search_meetings`, whose rule applies
@@ -322,13 +329,22 @@ never reads contacts, transcripts or notes, and never passes `contact_ids`.
 
 Each event is one meeting: kind `meeting`, the meeting id (for `get_meeting`), its start, its title, up to 5
 attendees and a shared meeting's owner as actors (`mailto:` and the email, or `name:` and the name), its
-`share_link`, and the labels `shared` (another person's notes) and `transcript`. A meeting is listed once it started
-2 hours ago, so its notes are most likely done. The cursor is the (start, id) of the last meeting listed: calling again
-with it lists what follows, and an older cursor lists the same meetings again.
+`share_link`, and the labels `shared` (another person's notes) and `transcript`. A meeting whose title or summary holds
+a secret, such as a key, is never listed: `refused` names it with the reason `secret`, and the cursor moves past it. A
+meeting is listed once it started 2 hours ago, so its notes are most likely done. The cursor is the (start, id) of the
+last meeting listed: calling again with it lists what follows, and an older cursor lists the same meetings again.
 
-Wispr Flow has no tool that names the signed-in account, so the owner is OpenCode's sign-in for the `wisprflow`
-server: `mailto:` and its label when the label is an email, otherwise its credential's id, which a new sign-in
-changes. The cursor holds a digest of the owner, so after a new sign-in an old cursor is refused.
+Wispr Flow has no tool that names the signed-in account, so the owner, on every page and in `probe` alike, is
+OpenCode's sign-in for the `wisprflow` server, unverified (OpenCode's sign-in, not a Wispr Flow identity): its id is
+always `wisprflow:credential:` and the credential's id, which a new sign-in changes, and its label, for display only,
+the credential's label. Renaming the label changes neither the owner nor a cursor. `probe` asserts `wisprflow_probe` and reads only that sign-in: it calls
+Wispr Flow for nothing. The cursor is bound to the plugin, the source and the account, and holds a digest of the
+owner: a cursor from another sign-in is refused with `ACCOUNT_MISMATCH` before any read (call `probe`, then start
+again with `since`), and one this source did not issue, an earlier version's included, with `CURSOR_INVALID`.
+
+The default rules allow `wisprflow_events_list` and `wisprflow_probe`. `events_list`'s read, `wisprflow_search_meetings`,
+must be allowed too for the agent of the session that runs it; a consumer's grant names exactly that operation, from
+`sources`.
 
 ## Status and RPC
 

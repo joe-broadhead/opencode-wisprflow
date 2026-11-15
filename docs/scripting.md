@@ -14,8 +14,10 @@ allows it like every other tool, so add a rule if a script should not have it.
 Every Wispr Flow tool only reads, so every method's class is `read`. The class is the worst thing a tool can do; it
 never decides whether a call runs: the rules do.
 
-`events_list` is the plugin's own read, not one of Wispr Flow's: it asserts `wisprflow_events_list`, then reads through
-`wisprflow_search_meetings` as the session, and gives its own `EVENTS_` codes, listed in the
+`events_list` and `probe` are the plugin's own reads, the `wisprflow.meetings` source, not Wispr Flow's tools:
+`events_list` asserts `wisprflow_events_list`, then reads through `wisprflow_search_meetings` as the session, and
+`probe` asserts `wisprflow_probe` and names OpenCode's sign-in without calling Wispr Flow. Both give the source
+contract's codes, such as `INPUT_INVALID`, `CURSOR_INVALID` and `ACCOUNT_MISMATCH`, listed in the
 [configuration guide](configuration.md#errors).
 
 Each method runs the tool with the same input: Wispr Flow's own tool, through OpenCode's own connection and sign-in.

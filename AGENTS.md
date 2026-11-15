@@ -52,12 +52,21 @@ the checks and the release steps.
   kit's: only `opencode.icons`, the three `exports` and the three `files` entries describe them. The article's
   `opencode.vendor` declares Wispr Flow as the vendor.
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
-- **The tools RPC.** `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block
-  between the `PLUGIN-SPECIFIC` markers here; change the rest in the shared copy first. Its methods are every name in
-  `READ_TOOLS`, `PERSONAL_TOOLS` and `WRITE_TOOLS`, each with its class; a tool Wispr Flow adds later is never a method.
+- **The tools RPC.** The transport is the source contract's `tools-rpc` module (`@we-the-rebel-alliance/source-contract`,
+  a devDependency pinned to a tag and bundled into `dist/index.js`); `src/tools-rpc.ts` is Wispr Flow's part of it, one
+  `ToolsRpcPlugin` value and the method table. Its methods are every name in `READ_TOOLS`, `PERSONAL_TOOLS` and
+  `WRITE_TOOLS`, each with its class, and the plugin's own `events_list` and `probe`; a tool Wispr Flow adds later is
+  never a method.
   Every call resolves the rule before dispatch: only an `allow` runs, so `get_participant_contacts` needs one. Keep the
   RPC id `wisprflow.meetings.tools` and its method names stable: scripts call them by name. `docs/scripting.md` is the
   contract, and `test/unit/scripting-docs.test.ts` parses every example in it and in the README.
+- **Sources.** `package.json`'s `sources` declares one source under source-contract version 1, `wisprflow.meetings`:
+  `events_list` (`wisprflow_events_list`, a tool and a tools RPC method) lists the meetings Wispr Flow captured, and
+  `probe` (`wisprflow_probe`, a tools RPC method only) names who is signed in. `src/events.ts` implements both with the
+  package's `events` and `cursor` modules. Wispr Flow has no tool that names the account, so the owner, in every page
+  and in `probe`, is OpenCode's sign-in for the server; `probe` calls Wispr Flow for nothing. The declared operations
+  are exactly the Wispr Flow tools the reads call (`search_meetings`). `test/conformance/` runs the package's
+  conformance kit over the declaration (the `conformance` stage) and writes `reports/conformance-report.json`.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
   `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`.
   Every temp root of the host and pack tests is a git repository under the system's `/tmp`, never under `TMPDIR` or
@@ -93,8 +102,8 @@ the checks and the release steps.
   `permission.ask`;
 - the deprecated `ctx.generate.text` and `experimental.policies`;
 - importing `@opencode/ai`;
-- a permission hook, except the one `permission.hook("evaluate")` in `src/host/tools-rpc.ts` (and the bundle that
-  inlines it), exactly once each: it turns an `ask` on one of the tools RPC's own script calls in flight into a deny,
+- a permission hook, except the one `permission.hook("evaluate")` of the source contract's tools RPC, in the bundle
+  that inlines it, exactly once: it turns an `ask` on one of the tools RPC's own script calls in flight into a deny,
   because no one can answer it, and touches nothing else;
 - references to private host source or host checkouts;
 - machine-local home and temp paths;

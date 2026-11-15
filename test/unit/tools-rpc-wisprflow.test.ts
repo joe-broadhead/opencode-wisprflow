@@ -1,14 +1,15 @@
-// Wispr Flow's part of the tools RPC: the plugin-specific block of src/host/tools-rpc.ts. The shared part is tested in
-// tools-rpc.test.ts.
+// Wispr Flow's part of the tools RPC: src/tools-rpc.ts, the plugin value the source contract's transport takes. The
+// shared part is tested in tools-rpc.test.ts.
 import { describe, expect, test } from "bun:test"
 import { PLUGIN_ID as WISPRFLOW_PLUGIN_ID, SERVER_NAME } from "../../src/constants.js"
-import { METHODS, NEXT_STEPS, PLUGIN_ID, shapeInput, shapeResult, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { METHODS, NEXT_STEPS, PLUGIN, shapeInput, shapeResult, TOOLS_RPC_ID } from "../../src/tools-rpc.js"
 import { defaultRules } from "../../src/permissions.js"
 import { PERSONAL_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 
 describe("Wispr Flow's tools RPC", () => {
   test("is wisprflow.meetings.tools, under the plugin's own id", () => {
-    expect(PLUGIN_ID).toBe(WISPRFLOW_PLUGIN_ID)
+    expect(PLUGIN.id).toBe(WISPRFLOW_PLUGIN_ID)
+    expect(PLUGIN.nextSteps).toBe(NEXT_STEPS)
     expect(TOOLS_RPC_ID).toBe("wisprflow.meetings.tools")
   })
 

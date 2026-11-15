@@ -1,25 +1,21 @@
 // Unit tests for the shared tools RPC module v2, against narrow fakes of the public plugin context.
-// A copy in a plugin repository changes only the two imports: its test runner, and the path of its copy.
+// It runs on the source contract's bundled transport with Wispr Flow's plugin value: the module is the package's, and the
+// block is src/tools-rpc.ts.
 import { describe, expect, test } from "bun:test"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
   CLASSES,
   hidden,
-  METHODS,
-  NEXT_STEPS,
-  PLUGIN_ID,
-  pluginError,
   registerToolsRpc,
-  shapeInput,
-  shapeResult,
-  TOOLS_RPC_ID,
   upstreamText,
   type MethodSpec,
   type PluginMethod,
   type ToolCall,
   type ToolsRpcOptions,
-} from "../../src/host/tools-rpc.js"
+} from "@we-the-rebel-alliance/source-contract/tools-rpc"
+import { PLUGIN_ID } from "../../src/constants.js"
+import { METHODS, NEXT_STEPS, PLUGIN, pluginError, shapeInput, shapeResult, TOOLS_RPC_ID } from "../../src/tools-rpc.js"
 import { PERSONAL_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
 
 type Effect = "allow" | "deny" | "ask"
@@ -203,6 +199,7 @@ async function setup(options: Setup = {}): Promise<Harness> {
   // Read by destructuring, the idiom the module uses: no dotted access from the options object for a forbidden scan to match.
   const { shapers, mcp: withMcp = true, server = SERVER, managed = true, unavailableDetail, notRegistered } = options
   const stop = await registerToolsRpc(ctx as never, {
+    plugin: PLUGIN,
     methods,
     ...(shapers === undefined ? {} : { shapers }),
     ...(withMcp === false

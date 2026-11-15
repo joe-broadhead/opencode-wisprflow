@@ -13,7 +13,7 @@ import {
   parseEventsListInput,
   startTime,
 } from "./host/events-list.js"
-import type { OwnedMethod, ToolCall } from "./host/tools-rpc.js"
+import type { OwnedMethod, ToolCall } from "@we-the-rebel-alliance/source-contract/tools-rpc"
 import { reasonOf, shortReason } from "./redact.js"
 
 /**

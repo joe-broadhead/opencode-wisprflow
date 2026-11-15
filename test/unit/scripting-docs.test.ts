@@ -5,7 +5,7 @@ import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { METHODS, TOOLS_RPC_ID } from "../../src/tools-rpc.js"
 import { LIVE } from "./wisprflow-catalog.js"
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url))

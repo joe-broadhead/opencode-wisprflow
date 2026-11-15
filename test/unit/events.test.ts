@@ -17,7 +17,8 @@ import {
   type EventsContext,
 } from "../../src/events.js"
 import { EVENT_LIMITS, PAGE, assertEventsListConformance, encodeCursor, resultProblems, type EventsListResult } from "../../src/host/events-list.js"
-import { registerToolsRpc } from "../../src/host/tools-rpc.js"
+import { registerToolsRpc } from "@we-the-rebel-alliance/source-contract/tools-rpc"
+import { PLUGIN } from "../../src/tools-rpc.js"
 import { defaultRules, evaluate } from "../../src/permissions.js"
 
 const NOW = Date.parse("2026-11-08T12:00:00Z")
@@ -199,7 +200,7 @@ describe("the tools RPC's events_list", () => {
       session: { get: async ({ sessionID }: { sessionID: string }) => ({ id: sessionID, agent: "build", location: { directory: "/fixture/project" } }) },
       agent: { get: async () => ({ data: { permissions: [{ action: "*", resource: "*", effect: "allow" }, ...defaultRules()] } }) },
     }
-    await registerToolsRpc(host as never, { methods: [eventsMethod(ctx, () => managed, () => NOW)], mcp: { server: "wisprflow", managed: () => managed } })
+    await registerToolsRpc(host as never, { plugin: PLUGIN, methods: [eventsMethod(ctx, () => managed, () => NOW)], mcp: { server: "wisprflow", managed: () => managed } })
     const rpcContext = { signal: new AbortController().signal, error: (type: string, message: string, data?: unknown) => ({ type, message, data }) }
     return { asserted, run: (input: unknown) => handlers.events_list!({ sessionID: "ses_1", input }, rpcContext) }
   }

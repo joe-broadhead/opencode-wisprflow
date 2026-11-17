@@ -334,6 +334,12 @@ a secret, such as a key, is never listed: `refused` names it with the reason `se
 meeting is listed once it started 2 hours ago, so its notes are most likely done. The cursor is the (start, id) of the
 last meeting listed: calling again with it lists what follows, and an older cursor lists the same meetings again.
 
+A meeting can reach Wispr Flow after the cursor passed its start: processed late, uploaded from a Mac that was offline,
+or shared with you later. So each read also looks up to a week behind the cursor, and the cursor carries a short tag
+(48 bits of a hash of the id) of each meeting it already listed or refused there, at most 48: a meeting in that stretch
+without a tag is listed then, once, out of start order with the earlier pages but oldest first within its page. A
+meeting you delete before it is listed is never listed, and one already listed is not withdrawn.
+
 On Wispr Flow's free plan, meetings older than 30 days are locked until the account upgrades, and Wispr Flow has no
 tool that names the plan, so every sign-in is read as if it showed only the last 30 days. A read that starts earlier
 (a cursor, or a `since`, more than 30 days old) answers `gap: { reason: "expired", since }` on its first page, `since`

@@ -253,6 +253,70 @@ describe("events_list", () => {
     expect(((await list()({ since: SINCE })) as EventsListResult).gap).toBeUndefined()
   })
 
+  test("lists a meeting that reached Wispr Flow after the cursor passed it, once, and nothing twice", async () => {
+    const meetings: Meeting[] = [...MEETINGS]
+    const fake = wisprflow(2, meetings)
+    const first = (await list(fake)({ since: SINCE, limit: PAGE.max })) as EventsListResult
+    expect(first.events.map((event) => event.external_id)).toEqual(EXPECTED)
+    // Processed late: it started before the cursor's position and only now appears in search_meetings.
+    meetings.push({ id: "w-late", title: "Uploaded late", start_time: "2026-10-24T09:00:00Z", attendees: [] })
+    const second = (await list(fake)({ account: ACCOUNT, cursor: first.cursor, limit: PAGE.max })) as EventsListResult
+    expect(resultProblems(second, PAGE.max, MAX_BYTES)).toEqual([])
+    expect(second.events.map((event) => event.external_id)).toEqual(["w-late"])
+    const third = (await list(fake)({ account: ACCOUNT, cursor: second.cursor, limit: PAGE.max })) as EventsListResult
+    expect(third.events).toEqual([])
+    expect(third.more).toBe(false)
+  })
+
+  test("keeps the position on a page of late meetings alone, and lists the rest of them next", async () => {
+    const meetings: Meeting[] = [...MEETINGS]
+    const fake = wisprflow(2, meetings)
+    const first = (await list(fake)({ since: SINCE, limit: PAGE.max })) as EventsListResult
+    meetings.push(...["a", "b", "c"].map((id, index) => ({ id: `late-${id}`, title: `Late ${id}`, start_time: `2026-10-2${index}T08:00:00Z`, attendees: [] })))
+    const listed: string[] = []
+    let cursor = first.cursor
+    for (let call = 0; call < 5; call++) {
+      const page = (await list(fake)({ account: ACCOUNT, cursor, limit: 1 })) as EventsListResult
+      listed.push(...page.events.map((event) => event.external_id))
+      cursor = page.cursor
+      if (!page.more) break
+    }
+    expect(listed).toEqual(["late-a", "late-b", "late-c"])
+  })
+
+  test("reads a 0.0.4 cursor, which has no look-back, without listing anything again", async () => {
+    const first = (await list()({ since: SINCE, limit: 3 })) as EventsListResult
+    const old = encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: Date.parse("2026-10-09T08:00:00Z"), i: "w-03a" })
+    const page = (await list()({ account: ACCOUNT, cursor: old, limit: PAGE.max })) as EventsListResult
+    expect(page.events.map((event) => event.external_id)).toEqual(EXPECTED.slice(3))
+    expect(first.events.map((event) => event.external_id)).toEqual(EXPECTED.slice(0, 3))
+  })
+
+  test("refuses a cursor whose look-back is malformed, before any read", async () => {
+    const fake = wisprflow()
+    const state = { o: digestOf(OWNER.id), t: Date.parse(SINCE), i: "" }
+    for (const extra of [{ f: "soon", r: "" }, { f: 0, r: "short" }, { f: 0, r: "!!!!!!!!" }, { f: state.t + 2, r: "" }, { f: 0, r: "AbCdEfGh".repeat(49) }, { r: "" }]) {
+      expect(await code(list(fake)({ account: ACCOUNT, cursor: encodeBoundCursor(BINDING, { ...state, ...extra }) }))).toBe("CURSOR_INVALID")
+    }
+    expect(fake.calls).toEqual([])
+  })
+
+  test("keeps the cursor small with many meetings behind it, and still lists each once", async () => {
+    const busy: Meeting[] = Array.from({ length: 120 }, (_, index) => ({ id: `b-${String(index).padStart(3, "0")}`, title: `Busy ${index}`, start_time: new Date(Date.parse("2026-10-20T00:00:00Z") + index * 3_600_000).toISOString(), attendees: [] }))
+    const fake = wisprflow(50, busy)
+    const listed: string[] = []
+    let cursor: string | undefined
+    for (let call = 0; call < 10; call++) {
+      const page = (await list(fake)(cursor === undefined ? { since: "2026-10-19", limit: 40 } : { account: ACCOUNT, cursor, limit: 40 })) as EventsListResult
+      expect(page.cursor.length).toBeLessThanOrEqual(EVENT_LIMITS.cursor)
+      listed.push(...page.events.map((event) => event.external_id))
+      cursor = page.cursor
+      if (!page.more) break
+    }
+    const settled = busy.filter((meeting) => Date.parse(meeting.start_time) <= NOW - SETTLE_MS).map((meeting) => meeting.id)
+    expect(listed).toEqual(settled)
+  })
+
   test("is allowed by the default rules, and so is probe, at every access", () => {
     for (const access of ["all", "ask-changes", "read-only"] as const) {
       for (const action of [EVENTS_ACTION, PROBE_ACTION]) expect(evaluate([{ action: "*", resource: "*", effect: "allow" }, ...defaultRules(access)], action)).toBe("allow")

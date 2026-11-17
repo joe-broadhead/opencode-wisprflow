@@ -41,6 +41,11 @@ import { reasonOf, shortReason } from "./redact.js"
  * before it answers a `gap` (`expired`, since where the read started) on its first page and lists from the window's
  * start, so its cursor is inside the window and no later page repeats the gap. A week Wispr Flow caps (more than 1000
  * meetings) is split and read again, so a cap loses nothing.
+ *
+ * A meeting can reach Wispr Flow after the cursor passed its start: processed late, uploaded from a Mac that was
+ * offline, or shared later. So every read also looks back up to LOOKBACK_MS behind the cursor, and the cursor carries a
+ * short tag of each meeting it already accounted for there (listed or refused, at most MAX_RECENT): a meeting in that
+ * stretch without a tag is listed once, and none is listed twice.
  */
 
 /** The plugin's package name, which every page names. */
@@ -67,6 +72,12 @@ export const SETTLE_MS = 2 * 3_600_000
  */
 export const VISIBLE_MS = 30 * 86_400_000
 const WINDOW_MS = 7 * 86_400_000
+/** How far behind the cursor each read looks for a meeting that reached Wispr Flow late. */
+export const LOOKBACK_MS = 7 * 86_400_000
+/** The most tags a cursor carries; past them the look-back starts after the oldest one dropped. */
+const MAX_RECENT = 48
+/** A tag's length: base64url characters of the sha256 of the meeting id (48 bits). */
+const TAG_LENGTH = 8
 /** The shortest window a cap splits: a minute Wispr Flow still caps is refused. */
 const MIN_SPLIT_MS = 60_000
 const MAX_WINDOWS = 60
@@ -302,18 +313,32 @@ const BINDING: CursorBinding = { plugin: SERVER_NAME, source: SOURCE, account: A
 const isoFloor = (time: number) => new Date(Math.floor(time / 1000) * 1000).toISOString()
 const isoCeil = (time: number) => new Date(Math.ceil(time / 1000) * 1000).toISOString()
 
+/** A meeting's tag in a cursor: the first TAG_LENGTH base64url characters of the sha256 of its id. */
+const tagOf = (id: string) => createHash("sha256").update(id).digest("base64url").slice(0, TAG_LENGTH)
+
+/** What a cursor holds: the position, the owner's digest, and the look-back it covers, from `floor`, with the tags of the meetings it accounted for there. */
+interface CursorState {
+  readonly key: Key
+  readonly owner: string
+  readonly floor: number
+  readonly tags: ReadonlySet<string>
+}
+
 /**
  * The state a cursor holds: anything that is not this source's bound cursor, an unbound cursor of an earlier version
- * included, is CURSOR_INVALID, and the caller starts again with since.
+ * included, is CURSOR_INVALID, and the caller starts again with since. A cursor of 0.0.4, with no look-back, covers
+ * nothing behind its position, so nothing it listed is listed again.
  */
-function cursorState(cursor: string): { readonly key: Key; readonly owner: string } {
+function cursorState(cursor: string): CursorState {
   const decoded = decodeBoundCursor(BINDING, cursor)
   const state = decoded.ok ? decoded.state : undefined
-  const [t, i, o] = [state?.["t"], state?.["i"], state?.["o"]]
-  if (typeof t !== "number" || !Number.isSafeInteger(t) || typeof i !== "string" || typeof o !== "string" || !/^[0-9a-f]{16}$/.test(o)) {
-    return refuse("CURSOR_INVALID", "The cursor was not issued by Wispr Flow's events_list", CURSOR_NEXT)
-  }
-  return { key: { t, i }, owner: o }
+  const [t, i, o, f, r] = [state?.["t"], state?.["i"], state?.["o"], state?.["f"], state?.["r"]]
+  const invalid = () => refuse("CURSOR_INVALID", "The cursor was not issued by Wispr Flow's events_list", CURSOR_NEXT)
+  if (typeof t !== "number" || !Number.isSafeInteger(t) || typeof i !== "string" || typeof o !== "string" || !/^[0-9a-f]{16}$/.test(o)) return invalid()
+  if (f === undefined && r === undefined) return { key: { t, i }, owner: o, floor: t + 1, tags: new Set() }
+  if (typeof f !== "number" || !Number.isSafeInteger(f) || f > t + 1 || typeof r !== "string" || r.length % TAG_LENGTH !== 0 || r.length > MAX_RECENT * TAG_LENGTH || !/^[A-Za-z0-9_-]*$/.test(r)) return invalid()
+  const tags = new Set(Array.from({ length: r.length / TAG_LENGTH }, (_, index) => r.slice(index * TAG_LENGTH, (index + 1) * TAG_LENGTH)))
+  return { key: { t, i }, owner: o, floor: f, tags }
 }
 
 /**
@@ -387,12 +412,21 @@ export async function listEvents(search: Search, owner: EventsOwner | undefined,
   const horizon = now - VISIBLE_MS
   const gap = start.t < horizon ? { reason: "expired" as const, since: new Date(start.t).toISOString() } : undefined
   const after: Key = gap ? { t: horizon, i: "" } : start
+  // The look-back: from `floor` up to the position, a meeting without a tag reached Wispr Flow after the cursor passed it.
+  const floor = gap || !cursor ? after.t : Math.max(cursor.floor, horizon)
+  const tags = gap || !cursor ? new Set<string>() : cursor.tags
 
+  const seen = new Map<string, MeetingFacts>()
   const found = new Map<string, MeetingFacts>()
-  let scanned = after.t
-  for (let from = after.t, windows = 0; from <= end && windows < MAX_WINDOWS && found.size <= request.limit; windows++) {
+  let scanned = Math.min(floor, after.t)
+  for (let from = scanned, windows = 0; from <= end && windows < MAX_WINDOWS && found.size <= request.limit; windows++) {
     const to = Math.min(from + WINDOW_MS, end)
-    for (const meeting of await searchWindow(search, from, to)) if (compare({ t: meeting.time, i: meeting.id }, after) > 0) found.set(meeting.id, meeting)
+    for (const meeting of await searchWindow(search, from, to)) {
+      seen.set(meeting.id, meeting)
+      const key = { t: meeting.time, i: meeting.id }
+      const late = compare(key, after) <= 0 && meeting.time >= floor && !tags.has(tagOf(meeting.id))
+      if (compare(key, after) > 0 || late) found.set(meeting.id, meeting)
+    }
     scanned = to
     if (to >= end) break
     from = to
@@ -411,8 +445,10 @@ export async function listEvents(search: Search, owner: EventsOwner | undefined,
   const refused = screened.refused.filter((entry) => index.get(entry.external_id)! <= last)
   const lastMeeting = chosen[last]
   const more = ordered.length > last + 1 || scanned < end
-  const position: Key = lastMeeting ? { t: lastMeeting.time, i: lastMeeting.id } : scanned > after.t ? { t: scanned, i: "" } : after
-  const next = encodeBoundCursor(BINDING, { o: ownerDigest, t: position.t, i: position.i })
+  // The position only moves forward: a page of late meetings alone leaves it where it was.
+  const reached: Key = lastMeeting ? { t: lastMeeting.time, i: lastMeeting.id } : scanned > after.t ? { t: scanned, i: "" } : after
+  const position: Key = compare(reached, after) > 0 ? reached : after
+  const next = encodeBoundCursor(BINDING, { o: ownerDigest, t: position.t, i: position.i, ...lookBack(seen, ordered.slice(last + 1), position, floor) })
   return eventsListResult({ source: SOURCE, account: ACCOUNT, owner }, page, next, more, { refused, plugin: PACKAGE, asOf: new Date(now).toISOString(), ...(gap ? { gap } : {}) })
 }
 
@@ -451,6 +487,25 @@ const STATE_TEXT: Record<string, string> = {
  * search_meetings through OpenCode's own executor, so its permission applies. A missing tool names the server's state;
  * Wispr Flow's own failure is UNAVAILABLE, with its first line redacted; a permission refusal passes through.
  */
+/**
+ * The look-back the next cursor covers: from LOOKBACK_MS behind its position (never before the read's own floor, and
+ * never past a meeting still waiting to be listed), the tags of every meeting seen there and accounted for; at most
+ * MAX_RECENT, the newest, the floor moving past the oldest one dropped.
+ */
+function lookBack(seen: ReadonlyMap<string, MeetingFacts>, waiting: readonly MeetingFacts[], position: Key, floor: number): { f: number; r: string } {
+  const pending = new Set(waiting.map((meeting) => meeting.id))
+  let from = Math.max(floor, position.t - LOOKBACK_MS)
+  for (const meeting of waiting) if (compare({ t: meeting.time, i: meeting.id }, position) <= 0) from = Math.min(from, meeting.time)
+  const covered = [...seen.values()]
+    .filter((meeting) => meeting.time >= from && compare({ t: meeting.time, i: meeting.id }, position) <= 0 && !pending.has(meeting.id))
+    .sort((a, b) => compare({ t: a.time, i: a.id }, { t: b.time, i: b.id }))
+  if (covered.length > MAX_RECENT) {
+    from = covered[covered.length - MAX_RECENT - 1]!.time + 1
+  }
+  const kept = covered.filter((meeting) => meeting.time >= from)
+  return { f: Math.min(from, position.t + 1), r: kept.map((meeting) => tagOf(meeting.id)).join("") }
+}
+
 function searcher(ctx: Pick<EventsContext, "tool" | "mcp">, context: CallContext): Search {
   let tool: Tool | undefined
   return async (input) => {

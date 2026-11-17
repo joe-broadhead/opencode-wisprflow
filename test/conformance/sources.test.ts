@@ -22,6 +22,8 @@ const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { na
 const checked = SOURCES_SCHEMA.check(pkg.sources)
 if (!checked.ok) throw new Error(`the sources declaration is invalid: ${checked.problems.join("; ")}`)
 const sources: Sources = checked.value
+/** The contract version the kit ran from: the installed package's, which the pinned tag fixes. */
+const CONTRACT_VERSION = (JSON.parse(readFileSync(join(root, "node_modules", "@we-the-rebel-alliance", "source-contract", "package.json"), "utf8")) as { version: string }).version
 const tools = pkg.jelly.tools.map((tool) => ({ id: tool.name.replace(/^wisprflow\./, ""), readOnly: tool.readOnly }))
 
 const NOW = Date.parse("2026-11-08T12:00:00Z")
@@ -141,7 +143,7 @@ describe("the source contract's conformance kit", () => {
     expect(reports.map((report) => report.source)).toEqual([SOURCE_ID])
     const installed = readInstalledDescriptor(root, { version: pkg.version })
     const report = {
-      contract: "@we-the-rebel-alliance/source-contract@0.1.0",
+      contract: `@we-the-rebel-alliance/source-contract@${CONTRACT_VERSION}`,
       plugin: pkg.name,
       version: pkg.version,
       descriptorHash: installed.ok ? installed.value.hash : null,

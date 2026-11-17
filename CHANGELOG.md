@@ -2,6 +2,49 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] - 2026-11-17
+
+### Fixed
+
+- For Memory: a listing no longer loses meetings that Wispr Flow's free plan hides. On the free plan, meetings older than
+  30 days are locked until the account upgrades, and Wispr Flow has no tool that names the plan, so a cursor or a
+  `since` that fell behind that window skipped those meetings with no sign. Every sign-in is now read as if it showed
+  only the last 30 days, with a day's margin: a read that starts more than 29 days ago answers
+  `gap: { reason: "expired", since }` on its first page, `since` being where it started, and lists from 29 days ago.
+  The cursor carries that line, so the read's later pages carry no gap, however much later they are read, unless the
+  read pauses long enough to fall behind the real 30 days. On a paid plan, `events_list` no longer lists meetings older
+  than that either (`search_meetings` still reads them).
+- For Memory: a week Wispr Flow caps (more than 1000 meetings) is split and read again, so the cap loses nothing. It
+  used to stop with `UNAVAILABLE` and the next step "call events_list again with a later since", which skipped history.
+  A minute Wispr Flow still caps is now answered as `gap: { reason: "window-truncated", since }` and passed, so the
+  cursor always moves on.
+- For Memory: a meeting that reaches Wispr Flow after the cursor passed its start (processed late, uploaded from a Mac
+  that was offline, or shared later) is now listed, once. Each read also looks up to a week behind the cursor, and the
+  cursor carries a short tag of each meeting it already listed or refused there (48, a few more when meetings share a
+  start), so a meeting there without a tag is listed and none is listed twice. A cursor of 0.0.4 still reads, and lists
+  nothing again. A meeting you delete before it is listed is never listed, and one already listed is not withdrawn.
+
+### Changed
+
+- The source contract is `@we-the-rebel-alliance/source-contract` v0.2.0 (`#v0.2.0`, 88bdc1e), bundled into
+  `dist/index.js` as before, so the package still has no runtime dependency. The declaration and `probe`'s answer are
+  unchanged, and a page's only new key is `gap`, which contract 1 already has. This release declares and sends none of
+  the keys a consumer on 0.1.x refuses (`removals[]`, an owner's `verified: false`, `permission.identityRules`,
+  `accounts.server`, `permission.readsIdentity`, a price's `conditions` or `min`, an empty `permission.identity`). The
+  owner is OpenCode's sign-in, not a Wispr Flow identity, so it is unverified; a page and `probe` will say so with
+  `verified: false` once Memory and jelly are on 0.2.0.
+- The conformance report is complete and ok. The kit's expired-cursor and gap checks run on a cursor older than the
+  29-day line. Only the check on `failed[]` is declared not applicable (`atomicPages`), with its reason in the
+  report, now exact: `events_list` makes no call per meeting, and a failed `search_meetings` call fails the whole read.
+  The report names the contract version it ran from.
+- Releases use the family's release kit r4.1 (gws `1f452e5`): `npm run conformance` (`bun test ./test/conformance`)
+  writes `reports/conformance-report.json`, the release runs it again on the parent in its own job and stops unless the
+  report is ok for the version, and the report becomes the Release asset `conformance-report.json`, listed in
+  `SHA256SUMS`. `docs/jelly.md` carries jelly's shared rules, word for word.
+- CI's concurrency group names the event (`ci-<event>-<ref>`), so a run by hand never replaces a pending push run.
+- Tested on OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0 (`TESTED_HOSTS`, unchanged); the supported range is
+  still `>=2.2.3 <2.4.0`.
+
 ## [0.0.4] - 2026-11-15
 
 ### Changed

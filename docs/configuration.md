@@ -4,7 +4,7 @@ Every option is optional. The smallest setup is one entry in `plugins`:
 
 ```json
 {
-  "plugins": ["github:joe-broadhead/opencode-wisprflow#v0.0.4"]
+  "plugins": ["github:joe-broadhead/opencode-wisprflow#v0.0.5"]
 }
 ```
 
@@ -12,7 +12,7 @@ To set options, use the object form:
 
 ```json
 {
-  "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.4", "options": { "allowUntestedHost": true } }]
+  "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.5", "options": { "allowUntestedHost": true } }]
 }
 ```
 
@@ -287,12 +287,12 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | `ACCOUNT_MISMATCH` | `events_list` or `probe`: an account other than `default`, or a cursor issued for another Wispr Flow sign-in than the one OpenCode holds now. | Pass account "default"; after a new sign-in, call probe and start again with since. |
 | `SOURCE_UNKNOWN` | `events_list` or `probe`: a source other than `wisprflow`. | Leave source out, or pass "wisprflow". |
 | `NEEDS_SIGN_IN` | `events_list` or `probe`: OpenCode holds no Wispr Flow sign-in to name as the owner. | Run /connect and choose Wispr Flow to sign in, then call probe and start again with since. |
-| `UNAVAILABLE` | `events_list` or `probe`: `wisprflow_search_meetings` is not available (the server is not connected or signed in, or the `wisprflow` name is another server's), or Wispr Flow's `search_meetings` failed or capped one week's meetings. The message holds the first line of Wispr Flow's text, cut and redacted. | Run /wisprflow-status and follow its next step, or call events_list again with the same cursor. |
+| `UNAVAILABLE` | `events_list` or `probe`: `wisprflow_search_meetings` is not available (the server is not connected or signed in, or the `wisprflow` name is another server's), or Wispr Flow's `search_meetings` failed. The message holds the first line of Wispr Flow's text, cut and redacted. | Run /wisprflow-status and follow its next step, or call events_list again with the same cursor. |
 
 For example:
 
 ```text
-OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the default), found "yes". Next step: Fix the plugin options in opencode.json, for example "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.4", "options": { "allowUntestedHost": true } }].
+OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the default), found "yes". Next step: Fix the plugin options in opencode.json, for example "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.5", "options": { "allowUntestedHost": true } }].
 ```
 
 Errors from Wispr Flow's server and from OpenCode pass through unchanged, except in the tools RPC for scripts, whose
@@ -312,7 +312,7 @@ probe({ source?, account? })
   → { source: "wisprflow", account: "default", owner: { id, label }, trust: "untrusted" }
 
 events_list({ since?, cursor?, limit?, account?, source? })
-  → { source: "wisprflow", account: "default", owner: { id, label }, events, cursor, more, refused?, plugin, asOf, trust: "untrusted" }
+  → { source: "wisprflow", account: "default", owner: { id, label }, events, cursor, more, refused?, gap?, plugin, asOf, trust: "untrusted" }
 ```
 
 | Input | Meaning |
@@ -333,6 +333,25 @@ attendees and a shared meeting's owner as actors (`mailto:` and the email, or `n
 a secret, such as a key, is never listed: `refused` names it with the reason `secret`, and the cursor moves past it. A
 meeting is listed once it started 2 hours ago, so its notes are most likely done. The cursor is the (start, id) of the
 last meeting listed: calling again with it lists what follows, and an older cursor lists the same meetings again.
+
+A meeting can reach Wispr Flow after the cursor passed its start: processed late, uploaded from a Mac that was offline,
+or shared with you later. So each read also looks up to a week behind the cursor, and the cursor carries a short tag
+(48 bits of a hash of the id) of each meeting it already listed or refused there, at most 48 (more only to keep a meeting
+that shares a start with one still waiting, and always within the cursor's 1024 characters): a meeting in that stretch
+without a tag is listed then, once, out of start order with the earlier pages but oldest first within its page. A
+meeting you delete before it is listed is never listed, and one already listed is not withdrawn.
+
+On Wispr Flow's free plan, meetings older than 30 days are locked until the account upgrades, and Wispr Flow has no
+tool that names the plan, so every sign-in is read as if it showed only the last 30 days, with a day's margin for clock
+skew and Wispr Flow's rounding. A read that starts earlier (a cursor, or a `since`, more than 29 days old) answers
+`gap: { reason: "expired", since }` on its first page, `since` being where it started, and lists from 29 days ago:
+meetings before that may be locked, and on a paid plan they are not listed here either (`search_meetings` still reads
+them). The cursor carries that line, so the read's later pages carry no gap, however much later they are read, unless
+the read pauses long enough for its position to fall behind the real 30 days: that is a new loss, and a new gap.
+
+A week Wispr Flow caps (more than 1000 meetings) is split and read again, so the cap loses nothing. A minute it still
+caps is a hole: the page before it stops short of it, and the next page answers `gap: { reason: "window-truncated",
+since }`, `since` being the minute's start, lists what follows and moves past it, so the cursor always moves on.
 
 Wispr Flow has no tool that names the signed-in account, so the owner, on every page and in `probe` alike, is
 OpenCode's sign-in for the `wisprflow` server, unverified (OpenCode's sign-in, not a Wispr Flow identity): its id is

@@ -88,7 +88,11 @@ describe("docs", () => {
   test("the Jelly guide states the declared tool counts, and says Jelly drops unknown keys rather than refusing them", () => {
     const tools = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).jelly.tools as { readOnly: boolean }[]
     expect(text("docs/jelly.md")).toContain(`${tools.length} tools are declared (${tools.filter((tool) => tool.readOnly).length} read-only)`)
-    expect(text("docs/jelly.md")).not.toMatch(/`latest` is|None yet|refuses/)
+    // Jelly's shared block is jelly's own text, word for word (the kit's drift check holds it byte for byte); it says
+    // what jelly refuses inside a declaration, so its lines are not this guide's claims.
+    const guide = text("docs/jelly.md").replace(/<!-- family-block:start -->.*?<!-- family-block:end -->/, "")
+    expect(guide).not.toContain("family-block")
+    expect(guide).not.toMatch(/`latest` is|None yet|refuses/)
     expect(text("docs/jelly.md")).toContain("the one line in `jelly.summary`, and beside it the mark in `jelly.icon`")
   })
 

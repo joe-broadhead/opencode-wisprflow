@@ -66,8 +66,8 @@ the checks and the release steps.
   package's `events` and `cursor` modules. Wispr Flow has no tool that names the account, so the owner, in every page
   and in `probe`, is OpenCode's sign-in for the server; `probe` calls Wispr Flow for nothing. The declared operations
   are exactly the Wispr Flow tools the reads call (`search_meetings`). `test/conformance/` runs the package's
-  conformance kit over the declaration (the `conformance` stage) and writes `reports/conformance-report.json`, which
-  must say `ok: true`. Only `atomicPages` is declared, with its
+  conformance kit over the declaration (the `conformance` stage, and `npm run conformance`, which a release runs) and
+  writes `reports/conformance-report.json`, which must say `ok: true`. Only `atomicPages` is declared, with its
   reason; every other check that applies must run. Never declare `noExpiry`: the free plan locks meetings older than
   30 days, so a read that starts before `VISIBLE_MS` answers a `gap` (`expired`) once and lists from the window.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with

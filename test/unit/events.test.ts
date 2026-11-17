@@ -57,6 +57,26 @@ const MEETINGS: readonly Meeting[] = [
 const EXPECTED = ["w-01", "w-02", "w-03a", "w-03b", ...Array.from({ length: 5 }, (_, index) => `w-04-${index}`), "w-05"]
 
 const BINDING = { plugin: "wisprflow", source: SOURCE, account: ACCOUNT }
+const DAY = 86_400_000
+
+/** search_meetings as the live one caps it: since inclusive, until exclusive, newest first, 200 a page, truncated past 1000 matches. */
+function capped(meetings: { id: string; start_time: string }[]) {
+  const calls: Record<string, unknown>[] = []
+  const search = async (input: Record<string, unknown>) => {
+    calls.push(input)
+    const since = Date.parse(String(input.since))
+    const until = Date.parse(String(input.until))
+    const matching = meetings.filter((meeting) => Date.parse(meeting.start_time) >= since && Date.parse(meeting.start_time) < until)
+      .sort((a, b) => Date.parse(b.start_time) - Date.parse(a.start_time))
+    const offset = typeof input.cursor === "string" ? Number(input.cursor) : 0
+    if (matching.length > 1000 && offset + 200 > 1000) return { meetings: [], has_more: false, truncated: true }
+    const page = matching.slice(offset, offset + 200).map((meeting) => ({ ...meeting, title: meeting.id, attendees: [] }))
+    const more = offset + 200 < matching.length
+    return { meetings: page, has_more: more, ...(more ? { next_cursor: String(offset + 200) } : {}) }
+  }
+  return { search, calls }
+}
+
 /** The owner digest a cursor holds: the first 16 hex of the sha256 of the owner's id. */
 const digestOf = (id: string) => createHash("sha256").update(id).digest("hex").slice(0, 16)
 /** One more meeting, whose title holds a password in a link: a secret the source refuses for good. */
@@ -229,11 +249,78 @@ describe("events_list", () => {
     expect(result.gap).toBeUndefined()
   })
 
-  test("stops with UNAVAILABLE only when Wispr Flow caps one minute, and never tells the caller to skip ahead", async () => {
-    const failure = await listEvents(async () => ({ meetings: [], has_more: false, truncated: true }), OWNER, { since: SINCE }, NOW).catch((error: unknown) => error)
-    expect(failure).toBeInstanceOf(EventsFailure)
-    expect((failure as EventsFailure).code).toBe("UNAVAILABLE")
-    expect((failure as EventsFailure).next).toContain("the same cursor")
+  test("gaps over a minute Wispr Flow still caps, once, and moves past it: the cursor always moves on", async () => {
+    const burst = Date.parse("2026-10-20T09:00:00Z")
+    const meetings = [
+      { id: "before", start_time: "2026-10-19T09:00:00Z" },
+      ...Array.from({ length: 1001 }, (_, index) => ({ id: `burst-${String(index).padStart(4, "0")}`, start_time: new Date(burst).toISOString() })),
+      { id: "after", start_time: "2026-10-22T09:00:00Z" },
+    ]
+    const fake = capped(meetings)
+    const first = (await listEvents(fake.search, OWNER, { since: "2026-10-18", limit: 10 }, NOW)) as EventsListResult
+    // The page with a meeting before the hole stops short of it.
+    expect(first.events.map((event) => event.external_id)).toEqual(["before"])
+    expect(first.gap).toBeUndefined()
+    expect(first.more).toBe(true)
+    const second = (await listEvents(fake.search, OWNER, { account: ACCOUNT, cursor: first.cursor, limit: 10 }, NOW)) as EventsListResult
+    expect(resultProblems(second, 10, MAX_BYTES)).toEqual([])
+    // The hole is the minute the split reached that holds the burst: its start is where history is lost from.
+    expect(second.gap?.reason).toBe("window-truncated")
+    expect(burst - Date.parse(second.gap!.since)).toBeGreaterThanOrEqual(0)
+    expect(burst - Date.parse(second.gap!.since)).toBeLessThan(60_000)
+    expect(second.events.map((event) => event.external_id)).toEqual(["after"])
+    const third = (await listEvents(fake.search, OWNER, { account: ACCOUNT, cursor: second.cursor, limit: 10 }, NOW)) as EventsListResult
+    expect(third.gap).toBeUndefined()
+    expect(third.events).toEqual([])
+    expect(third.more).toBe(false)
+  })
+
+  test("a later page of a read that answered its gap answers none, even read minutes or hours later", async () => {
+    const line = NOW - VISIBLE_MS + DAY
+    const fake = wisprflow(1, [
+      { id: "edge-a", title: "A", start_time: new Date(line + 60_000).toISOString(), attendees: [] },
+      { id: "edge-b", title: "B", start_time: new Date(line + 90_000).toISOString(), attendees: [] },
+      { id: "new-10", title: "C", start_time: new Date(NOW - 10 * DAY).toISOString(), attendees: [] },
+    ])
+    const old = encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: NOW - 45 * DAY, i: "" })
+    const first = (await list(fake)({ account: ACCOUNT, cursor: old, limit: 1 })) as EventsListResult
+    expect(first.gap?.reason).toBe("expired")
+    expect(first.events.map((event) => event.external_id)).toEqual(["edge-a"])
+    const second = (await list(fake, NOW + 2 * 60_000)({ account: ACCOUNT, cursor: first.cursor, limit: 1 })) as EventsListResult
+    expect(second.gap).toBeUndefined()
+    expect(second.events.map((event) => event.external_id)).toEqual(["edge-b"])
+    const third = (await list(fake, NOW + 20 * 3_600_000)({ account: ACCOUNT, cursor: second.cursor, limit: 1 })) as EventsListResult
+    expect(third.gap).toBeUndefined()
+    expect(third.events.map((event) => event.external_id)).toEqual(["new-10"])
+    // After a pause of more than a day, the read's position is behind the real 30 days: that is a new loss, and a new gap.
+    const paused = (await list(fake, NOW + 2 * DAY)({ account: ACCOUNT, cursor: second.cursor, limit: 1 })) as EventsListResult
+    expect(paused.gap?.reason).toBe("expired")
+  })
+
+  test("gaps a day inside Wispr Flow's 30, so a meeting near the lock is never lost silently", async () => {
+    const at = (age: number) => encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: NOW - age, i: "", f: NOW - age + 1, r: "" })
+    expect(((await list()({ account: ACCOUNT, cursor: at(29 * DAY + 3_600_000) })) as EventsListResult).gap?.reason).toBe("expired")
+    expect(((await list()({ account: ACCOUNT, cursor: at(29 * DAY - 3_600_000) })) as EventsListResult).gap).toBeUndefined()
+    expect(((await list()({ since: new Date(NOW - 29 * DAY - 60_000).toISOString() })) as EventsListResult).gap?.reason).toBe("expired")
+  })
+
+  test("keeps a late meeting that shares a start with one just listed, behind a full tag set", async () => {
+    const t0 = NOW - 6 * DAY
+    const meetings = Array.from({ length: 48 }, (_, index) => ({ id: `k-${String(index).padStart(2, "0")}`, start_time: new Date(t0 + index * 2 * 3_600_000).toISOString() }))
+    const fake = capped(meetings)
+    const first = (await listEvents(fake.search, OWNER, { since: new Date(t0 - DAY).toISOString(), limit: 500 }, NOW)) as EventsListResult
+    expect(first.events.length).toBe(48)
+    const tie = new Date(t0 - 12 * 3_600_000).toISOString()
+    meetings.push({ id: "late-1", start_time: tie }, { id: "late-2", start_time: tie }, { id: "late-3", start_time: tie })
+    const listed: string[] = []
+    let page = first
+    for (let call = 0; call < 6; call++) {
+      page = (await listEvents(fake.search, OWNER, { account: ACCOUNT, cursor: page.cursor, limit: 1 }, NOW)) as EventsListResult
+      expect(page.cursor.length).toBeLessThanOrEqual(EVENT_LIMITS.cursor)
+      listed.push(...page.events.map((event) => event.external_id))
+      if (!page.more) break
+    }
+    expect(listed).toEqual(["late-1", "late-2", "late-3"])
   })
 
   test("answers a gap once for a read that starts before the 30 days the free plan shows, and lists from there", async () => {
@@ -295,7 +382,7 @@ describe("events_list", () => {
   test("refuses a cursor whose look-back is malformed, before any read", async () => {
     const fake = wisprflow()
     const state = { o: digestOf(OWNER.id), t: Date.parse(SINCE), i: "" }
-    for (const extra of [{ f: "soon", r: "" }, { f: 0, r: "short" }, { f: 0, r: "!!!!!!!!" }, { f: state.t + 2, r: "" }, { f: 0, r: "AbCdEfGh".repeat(49) }, { r: "" }]) {
+    for (const extra of [{ f: "soon", r: "" }, { f: 0, r: "short" }, { f: 0, r: "!!!!!!!!" }, { f: state.t + 2, r: "" }, { r: "" }, { f: 0, r: "", g: "soon" }, { f: 0, r: "", g: state.t + 2 }]) {
       expect(await code(list(fake)({ account: ACCOUNT, cursor: encodeBoundCursor(BINDING, { ...state, ...extra }) }))).toBe("CURSOR_INVALID")
     }
     expect(fake.calls).toEqual([])

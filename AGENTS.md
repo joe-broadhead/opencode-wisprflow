@@ -69,7 +69,8 @@ the checks and the release steps.
   conformance kit over the declaration (the `conformance` stage, and `npm run conformance`, which a release runs) and
   writes `reports/conformance-report.json`, which must say `ok: true`. Only `atomicPages` is declared, with its
   reason; every other check that applies must run. Never declare `noExpiry`: the free plan locks meetings older than
-  30 days, so a read that starts before `VISIBLE_MS` answers a `gap` (`expired`) once and lists from the window.
+  30 days, so a read that starts more than 29 days ago (`VISIBLE_MS` less `MARGIN_MS`) answers a `gap` (`expired`)
+  once and restarts at that line, which its cursor carries (`g`) so the read's later pages never gap again.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
   `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`.
   Every temp root of the host and pack tests is a git repository under the system's `/tmp`, never under `TMPDIR` or

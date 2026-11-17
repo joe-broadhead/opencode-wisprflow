@@ -5,6 +5,7 @@
 // it, so the kit sees exactly what each read asserts. The report is written to reports/conformance-report.json, for a
 // release to attach; it holds no time or path, so every run writes the same bytes.
 import { describe, expect, test } from "bun:test"
+import { createHash } from "node:crypto"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -26,7 +27,8 @@ const sources: Sources = checked.value
 const CONTRACT_VERSION = (JSON.parse(readFileSync(join(root, "node_modules", "@we-the-rebel-alliance", "source-contract", "package.json"), "utf8")) as { version: string }).version
 const tools = pkg.jelly.tools.map((tool) => ({ id: tool.name.replace(/^wisprflow\./, ""), readOnly: tool.readOnly }))
 
-const NOW = Date.parse("2026-11-08T12:00:00Z")
+/** Inside the 30 days Wispr Flow's free plan shows: SINCE and every meeting below are within them. */
+const NOW = Date.parse("2026-10-25T12:00:00Z")
 const SINCE = "2026-09-28"
 /** OpenCode's sign-in for wisprflow: its label is the integration's name, so the owner is the credential. */
 const CREDENTIAL = { type: "credential", id: "cred-conformance", label: "Wispr Flow" }
@@ -74,10 +76,11 @@ function context(permission: SessionContext["permission"]): EventsContext {
 }
 
 /**
- * Why no single meeting can fail on its own, for the kit's `failed-holds-cursor` check: one search_meetings call answers
- * each page whole, and a failed call fails the listing.
+ * Why no single meeting can fail on its own, for the kit's `failed-holds-cursor` check: events_list makes no call per
+ * meeting. Every meeting comes whole from a search_meetings listing (a page may take a few of them, one per week and
+ * Wispr Flow page), and any search_meetings call that fails fails the whole events_list call, so there is no partial page.
  */
-const ATOMIC = "Wispr Flow's search_meetings answers each page of meetings whole, in one call, and a failed call fails the listing, so no single meeting fails on its own"
+const ATOMIC = "events_list makes no call per meeting: every meeting comes whole from a search_meetings listing, and a failed search_meetings call fails the whole events_list call, so no single meeting fails on its own"
 
 const call = (): ToolCall => ({ sessionID: "ses_conformance", agent: "build", messageID: "msg_script", id: "script:conformance", signal: new AbortController().signal, progress: async () => {} })
 const open: SessionContext = { account: ACCOUNT, permission: { assert: async () => {} } }
@@ -87,12 +90,19 @@ async function cases(): Promise<PageCase[]> {
   const first = (await list({ since: SINCE, limit: 2 }))["cursor"] as string
   const done = (await list({ since: SINCE, limit: 500 }))["cursor"] as string
   const bound = (binding: { plugin: string; source: string; account: string }) => encodeBoundCursor(binding, { o: "0123456789abcdef", t: Date.parse(SINCE), i: "" })
+  // A cursor this sign-in was given 40 days before NOW: its position is older than the 30 days Wispr Flow's free plan
+  // shows, so the history behind it may be locked. The owner digest is the one the source binds (sha256 of the id).
+  const digest = createHash("sha256").update(`wisprflow:credential:${CREDENTIAL.id}`).digest("hex").slice(0, 16)
+  const stale = encodeBoundCursor({ plugin: "wisprflow", source: SOURCE, account: ACCOUNT }, { o: digest, t: NOW - 40 * 86_400_000, i: "" })
   return [
     { name: "a first listing, one meeting refused for a secret", input: { since: SINCE }, expect: "page" },
     { name: "a first listing that names the account probe answers", input: { account: ACCOUNT, since: SINCE }, expect: "page" },
     { name: "what came after the first two", input: { account: ACCOUNT, cursor: first }, expect: "page" },
     { name: "the same, two at a time", input: { account: ACCOUNT, cursor: first, limit: 2 }, expect: "page" },
     { name: "nothing new since the last listing", input: { account: ACCOUNT, cursor: done }, expect: "empty" },
+    { name: "a cursor from before the 30 days the free plan shows", input: { account: ACCOUNT, cursor: stale }, expect: "expired" },
+    { name: "the same, two at a time: the next page carries no gap", input: { account: ACCOUNT, cursor: stale, limit: 2 }, expect: "expired" },
+    { name: "a first listing from before the 30 days", input: { account: ACCOUNT, since: "2026-08-01", limit: 2 }, expect: "page" },
     { name: "a cursor without the account it reads", input: { cursor: first }, expect: { refuses: "INPUT_INVALID" } },
     { name: "a cursor passed for another account", input: { account: "work", cursor: first }, expect: { refuses: "ACCOUNT_MISMATCH" } },
     { name: "a cursor issued for another sign-in", input: { account: ACCOUNT, cursor: bound({ plugin: "wisprflow", source: SOURCE, account: ACCOUNT }) }, expect: { refuses: "ACCOUNT_MISMATCH" } },
@@ -133,10 +143,12 @@ describe("the source contract's conformance kit", () => {
     })
     reports.push(report)
     expect(report.problems).toEqual([])
-    // A cursor is a meeting's start and id, which never expire, and Wispr Flow gives no sign of history it no longer
-    // serves: the source never answers CURSOR_EXPIRED, so the kit's gap check cannot run and the report stays incomplete
-    // on that one check.
-    expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual(["gap-and-cursor-expired"])
+    // Every check that applies ran: the report is complete. The expired-cursor and gap checks ran on the stale cursor;
+    // only failed[] is declared not applicable (atomicPages), with its reason shown.
+    expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual([])
+    expect(report.checks.filter((check) => check.ran).map((check) => check.name)).toEqual(expect.arrayContaining(["gap-and-cursor-expired", "gap-once-per-read", "refused-is-final", "probe"]))
+    expect(report.checks.filter((check) => check.reason !== undefined).map((check) => check.name)).toEqual(["failed-holds-cursor"])
+    expect(report.ok).toBe(true)
   })
 
   test("writes the report a release attaches", () => {

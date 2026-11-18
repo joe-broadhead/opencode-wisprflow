@@ -10,7 +10,7 @@ the checks and the release steps.
 
 - **Public API only.** Use only the public `@opencode/plugin` 2.2.3 API. `opencode.host` in `package.json` and
   `SUPPORTED_HOST` in `src/constants.ts` both say exactly `>=2.2.3 <2.4.0`, never `^2.2.3`. `TESTED_HOSTS` in
-  `src/constants.ts` is the one list of tested releases (2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0): status calls only those tested,
+  `src/constants.ts` is the one list of tested releases (2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2): status calls only those tested,
   the host and pack stages and CI run on each, and `test/unit/docs.test.ts` fails when any doc's "tested on …" sentence
   names a different set. Inside the range an untested release still starts; the untested example in tests is 2.2.99.
 - **Greenfield.** No legacy, migration code, compatibility shim, dual path or deprecated alias, and nothing dead.
@@ -72,7 +72,10 @@ the checks and the release steps.
   30 days, so a read that starts more than 29 days ago (`VISIBLE_MS` less `MARGIN_MS`) answers a `gap` (`expired`)
   once and restarts at that line, which its cursor carries (`g`) so the read's later pages never gap again.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
-  `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`.
+  `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`. On
+  2.3.1 and later the harness builds that host through `PromiseSdk.create`, which `OpenCode.create` calls, with the
+  SDK's `overrides` so that its Automation service also runs the scheduler, as `opencode serve` does: Code Mode with
+  nobody present runs there as an automation's code action (`unattended` in `test/host/harness.ts`).
   Every temp root of the host and pack tests is a git repository under the system's `/tmp`, never under `TMPDIR` or
   `HOME`, so OpenCode never finds a `.opencode` folder of whoever runs them; each stock server has its own port.
   Never sign in to Wispr Flow or call its server from a check.

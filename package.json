@@ -96,6 +96,31 @@
           "class": "free"
         },
         "maxBytes": 65536
+      },
+      {
+        "id": "wisprflow.meetings.list",
+        "kind": "snapshot",
+        "tool": "events_list",
+        "input": {
+          "source": "wisprflow",
+          "list": "meetings"
+        },
+        "output": "list",
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "tool": "wisprflow_events_list",
+          "operations": [
+            "search_meetings"
+          ]
+        },
+        "private": true,
+        "cost": {
+          "class": "free"
+        },
+        "maxAgeSec": 900,
+        "maxBytes": 65536
       }
     ]
   },

@@ -12,7 +12,7 @@ interface Options {
   readonly access: Access
 }
 
-const EXAMPLE = `"plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.5", "options": { "allowUntestedHost": true } }]`
+const EXAMPLE = `"plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.6", "options": { "allowUntestedHost": true } }]`
 const ACCEPTED = {
   allowUntestedHost: "true or false (the default)",
   access: `"all" (the default), "ask-changes" or "read-only"`,

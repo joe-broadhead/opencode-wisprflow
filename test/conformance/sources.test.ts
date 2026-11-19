@@ -27,7 +27,7 @@ const sources: Sources = checked.value
 const CONTRACT_VERSION = (JSON.parse(readFileSync(join(root, "node_modules", "@we-the-rebel-alliance", "source-contract", "package.json"), "utf8")) as { version: string }).version
 const tools = pkg.jelly.tools.map((tool) => ({ id: tool.name.replace(/^wisprflow\./, ""), readOnly: tool.readOnly }))
 
-/** Inside the 30 days Wispr Flow's free plan shows: SINCE and every meeting below are within them. */
+/** The fixture's meetings start inside 30 days of NOW. That is the fixture, not a cutoff the listing applies. */
 const NOW = Date.parse("2026-10-25T12:00:00Z")
 const SINCE = "2026-09-28"
 /** OpenCode's sign-in for wisprflow: its label is the integration's name, so the owner is the credential. */
@@ -81,6 +81,8 @@ function context(permission: SessionContext["permission"]): EventsContext {
  * Wispr Flow page), and any search_meetings call that fails fails the whole events_list call, so there is no partial page.
  */
 const ATOMIC = "events_list makes no call per meeting: every meeting comes whole from a search_meetings listing, and a failed search_meetings call fails the whole events_list call, so no single meeting fails on its own"
+/** Why a cursor does not expire here: no tool names the plan, so the listing does not invent a free-plan cutoff. */
+const NO_EXPIRY = "No Wispr Flow tool names the plan, so a listing does not invent a 30-day free-plan cutoff and a cursor does not expire here. A 30-day cutoff applies only when the plan is known to be free"
 
 const call = (): ToolCall => ({ sessionID: "ses_conformance", agent: "build", messageID: "msg_script", id: "script:conformance", signal: new AbortController().signal, progress: async () => {} })
 const open: SessionContext = { account: ACCOUNT, permission: { assert: async () => {} } }
@@ -90,8 +92,8 @@ async function cases(): Promise<PageCase[]> {
   const first = (await list({ since: SINCE, limit: 2 }))["cursor"] as string
   const done = (await list({ since: SINCE, limit: 500 }))["cursor"] as string
   const bound = (binding: { plugin: string; source: string; account: string }) => encodeBoundCursor(binding, { o: "0123456789abcdef", t: Date.parse(SINCE), i: "" })
-  // A cursor this sign-in was given 40 days before NOW: its position is older than the 30 days Wispr Flow's free plan
-  // shows, so the history behind it may be locked. The owner digest is the one the source binds (sha256 of the id).
+  // A cursor this sign-in was given 40 days before NOW. No tool names the plan, so the listing does not treat that as
+  // an expired free-plan window: it lists what search_meetings returns. The owner digest is the one the source binds.
   const digest = createHash("sha256").update(`wisprflow:credential:${CREDENTIAL.id}`).digest("hex").slice(0, 16)
   const stale = encodeBoundCursor({ plugin: "wisprflow", source: SOURCE, account: ACCOUNT }, { o: digest, t: NOW - 40 * 86_400_000, i: "" })
   return [
@@ -100,9 +102,9 @@ async function cases(): Promise<PageCase[]> {
     { name: "what came after the first two", input: { account: ACCOUNT, cursor: first }, expect: "page" },
     { name: "the same, two at a time", input: { account: ACCOUNT, cursor: first, limit: 2 }, expect: "page" },
     { name: "nothing new since the last listing", input: { account: ACCOUNT, cursor: done }, expect: "empty" },
-    { name: "a cursor from before the 30 days the free plan shows", input: { account: ACCOUNT, cursor: stale }, expect: "expired" },
-    { name: "the same, two at a time: the next page carries no gap", input: { account: ACCOUNT, cursor: stale, limit: 2 }, expect: "expired" },
-    { name: "a first listing from before the 30 days", input: { account: ACCOUNT, since: "2026-08-01", limit: 2 }, expect: "page" },
+    { name: "a cursor older than 30 days still lists what the API returns", input: { account: ACCOUNT, cursor: stale }, expect: "page" },
+    { name: "the same, two at a time, with no expired gap", input: { account: ACCOUNT, cursor: stale, limit: 2 }, expect: "page" },
+    { name: "a first listing from before 30 days ago", input: { account: ACCOUNT, since: "2026-08-01", limit: 2 }, expect: "page" },
     { name: "a cursor without the account it reads", input: { cursor: first }, expect: { refuses: "INPUT_INVALID" } },
     { name: "a cursor passed for another account", input: { account: "work", cursor: first }, expect: { refuses: "ACCOUNT_MISMATCH" } },
     { name: "a cursor issued for another sign-in", input: { account: ACCOUNT, cursor: bound({ plugin: "wisprflow", source: SOURCE, account: ACCOUNT }) }, expect: { refuses: "ACCOUNT_MISMATCH" } },
@@ -140,14 +142,16 @@ describe("the source contract's conformance kit", () => {
       sources,
       describe: { id: TOOLS_RPC_ID },
       atomicPages: { reason: ATOMIC },
+      noExpiry: { reason: NO_EXPIRY },
     })
     reports.push(report)
     expect(report.problems).toEqual([])
-    // Every check that applies ran: the report is complete. The expired-cursor and gap checks ran on the stale cursor;
-    // only failed[] is declared not applicable (atomicPages), with its reason shown.
+    // Every check that applies ran: the report is complete. The expired-cursor check does not apply, because no tool
+    // names the plan and a listing does not invent a 30-day cutoff. failed[] is not applicable either (atomicPages).
     expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual([])
-    expect(report.checks.filter((check) => check.ran).map((check) => check.name)).toEqual(expect.arrayContaining(["gap-and-cursor-expired", "gap-once-per-read", "refused-is-final", "probe"]))
-    expect(report.checks.filter((check) => check.reason !== undefined).map((check) => check.name)).toEqual(["failed-holds-cursor"])
+    expect(report.checks.filter((check) => check.ran).map((check) => check.name)).toEqual(expect.arrayContaining(["refused-is-final", "probe"]))
+    expect(report.checks.find((check) => check.name === "gap-and-cursor-expired")).toMatchObject({ ran: false, notApplicable: true, reason: NO_EXPIRY })
+    expect(report.checks.filter((check) => check.reason !== undefined).map((check) => check.name)).toEqual(["failed-holds-cursor", "gap-and-cursor-expired"])
     expect(report.ok).toBe(true)
   })
 

@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- For Memory: a paid or unknown plan is no longer read as a 30-day free plan. No Wispr Flow tool names the plan, so a
+  listing does not invent that cutoff: it lists what `search_meetings` returns, including meetings older than 30 days,
+  and it does not answer `gap: { reason: "expired", since }` for a meeting the API returned. A 30-day cutoff applies
+  only when the plan is known to be free. If `search_meetings` itself returns only 30 days, that is Wispr Flow's limit,
+  and the listing does not drop those meetings a second time.
+
 ## [0.0.6] - 2026-11-18
 
 ### Changed

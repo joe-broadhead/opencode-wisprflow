@@ -17,6 +17,8 @@ import {
   VISIBLE_MS,
   eventsMethod,
   listEvents,
+  readPlan,
+  type HistoryPlan,
   probeMethod,
   readMeetingsPage,
   resultData,
@@ -28,7 +30,7 @@ import { registerToolsRpc } from "@we-the-rebel-alliance/source-contract/tools-r
 import { PLUGIN } from "../../src/tools-rpc.js"
 import { defaultRules, evaluate } from "../../src/permissions.js"
 
-/** Inside the 30 days the free plan shows: SINCE and every meeting below are within them. */
+/** The fixture's meetings start inside 30 days of NOW. That is the fixture, not a cutoff the listing applies. */
 const NOW = Date.parse("2026-10-25T12:00:00Z")
 const SINCE = "2026-09-28"
 /** OpenCode's sign-in: the credential's id, labelled with its label (an email here, which never becomes the id). */
@@ -99,7 +101,7 @@ function wisprflow(pageSize = 2, meetings: readonly Meeting[] = MEETINGS) {
   return { search, calls }
 }
 
-const list = (fake = wisprflow(), now = NOW, owner: typeof OWNER | undefined = OWNER) => (input: unknown) => listEvents(fake.search, owner, input, now)
+const list = (fake = wisprflow(), now = NOW, owner: typeof OWNER | undefined = OWNER, plan: HistoryPlan = "unknown") => (input: unknown) => listEvents(fake.search, owner, input, now, plan)
 const code = async (promise: Promise<unknown>) => {
   try {
     await promise
@@ -275,7 +277,7 @@ describe("events_list", () => {
     expect(third.more).toBe(false)
   })
 
-  test("a later page of a read that answered its gap answers none, even read minutes or hours later", async () => {
+  test("a later page of a known free plan's gap answers none, even read minutes or hours later", async () => {
     const line = NOW - VISIBLE_MS + DAY
     const fake = wisprflow(1, [
       { id: "edge-a", title: "A", start_time: new Date(line + 60_000).toISOString(), attendees: [] },
@@ -283,25 +285,32 @@ describe("events_list", () => {
       { id: "new-10", title: "C", start_time: new Date(NOW - 10 * DAY).toISOString(), attendees: [] },
     ])
     const old = encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: NOW - 45 * DAY, i: "" })
-    const first = (await list(fake)({ account: ACCOUNT, cursor: old, limit: 1 })) as EventsListResult
+    const first = (await list(fake, NOW, OWNER, "free")({ account: ACCOUNT, cursor: old, limit: 1 })) as EventsListResult
     expect(first.gap?.reason).toBe("expired")
     expect(first.events.map((event) => event.external_id)).toEqual(["edge-a"])
-    const second = (await list(fake, NOW + 2 * 60_000)({ account: ACCOUNT, cursor: first.cursor, limit: 1 })) as EventsListResult
+    const second = (await list(fake, NOW + 2 * 60_000, OWNER, "free")({ account: ACCOUNT, cursor: first.cursor, limit: 1 })) as EventsListResult
     expect(second.gap).toBeUndefined()
     expect(second.events.map((event) => event.external_id)).toEqual(["edge-b"])
-    const third = (await list(fake, NOW + 20 * 3_600_000)({ account: ACCOUNT, cursor: second.cursor, limit: 1 })) as EventsListResult
+    const third = (await list(fake, NOW + 20 * 3_600_000, OWNER, "free")({ account: ACCOUNT, cursor: second.cursor, limit: 1 })) as EventsListResult
     expect(third.gap).toBeUndefined()
     expect(third.events.map((event) => event.external_id)).toEqual(["new-10"])
     // After a pause of more than a day, the read's position is behind the real 30 days: that is a new loss, and a new gap.
-    const paused = (await list(fake, NOW + 2 * DAY)({ account: ACCOUNT, cursor: second.cursor, limit: 1 })) as EventsListResult
+    const paused = (await list(fake, NOW + 2 * DAY, OWNER, "free")({ account: ACCOUNT, cursor: second.cursor, limit: 1 })) as EventsListResult
     expect(paused.gap?.reason).toBe("expired")
   })
 
-  test("gaps a day inside Wispr Flow's 30, so a meeting near the lock is never lost silently", async () => {
+  test("gaps a day inside the lock only when the plan is known to be free", async () => {
     const at = (age: number) => encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: NOW - age, i: "", f: NOW - age + 1, r: "" })
-    expect(((await list()({ account: ACCOUNT, cursor: at(29 * DAY + 3_600_000) })) as EventsListResult).gap?.reason).toBe("expired")
-    expect(((await list()({ account: ACCOUNT, cursor: at(29 * DAY - 3_600_000) })) as EventsListResult).gap).toBeUndefined()
-    expect(((await list()({ since: new Date(NOW - 29 * DAY - 60_000).toISOString() })) as EventsListResult).gap?.reason).toBe("expired")
+    const free = list(undefined, NOW, OWNER, "free")
+    expect(((await free({ account: ACCOUNT, cursor: at(29 * DAY + 3_600_000) })) as EventsListResult).gap?.reason).toBe("expired")
+    expect(((await free({ account: ACCOUNT, cursor: at(29 * DAY - 3_600_000) })) as EventsListResult).gap).toBeUndefined()
+    expect(((await free({ since: new Date(NOW - 29 * DAY - 60_000).toISOString() })) as EventsListResult).gap?.reason).toBe("expired")
+    // Unknown and paid are not the free plan: the same reads do not invent the cutoff.
+    for (const plan of ["unknown", "paid"] as const) {
+      const open = list(undefined, NOW, OWNER, plan)
+      expect(((await open({ account: ACCOUNT, cursor: at(29 * DAY + 3_600_000) })) as EventsListResult).gap).toBeUndefined()
+      expect(((await open({ since: new Date(NOW - 29 * DAY - 60_000).toISOString() })) as EventsListResult).gap).toBeUndefined()
+    }
   })
 
   test("keeps a late meeting that shares a start with one just listed, behind a full tag set", async () => {
@@ -323,21 +332,38 @@ describe("events_list", () => {
     expect(listed).toEqual(["late-1", "late-2", "late-3"])
   })
 
-  test("answers a gap once for a read that starts before the 30 days the free plan shows, and lists from there", async () => {
+  test("lists a meeting older than 30 days when the plan is not known to be free, and does not answer an expired gap for it", async () => {
+    expect(readPlan()).toBe("unknown")
+    const old = encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: NOW - VISIBLE_MS - 10 * 86_400_000, i: "" })
+    const locked = new Date(NOW - VISIBLE_MS - 86_400_000).toISOString()
+    for (const plan of ["unknown", "paid"] as const) {
+      const fake = wisprflow(2, [...MEETINGS, { id: "w-00", title: "Older than 30 days", start_time: locked, attendees: [] }])
+      const first = (await list(fake, NOW, OWNER, plan)({ account: ACCOUNT, cursor: old, limit: 2 })) as EventsListResult
+      expect(resultProblems(first, 2, MAX_BYTES)).toEqual([])
+      expect(first.gap).toBeUndefined()
+      expect(first.events.map((event) => event.external_id)).toEqual(["w-00", "w-01"])
+      expect(Math.min(...fake.calls.map((call) => Date.parse(String(call.since))))).toBeLessThanOrEqual(Date.parse(locked))
+      const opened = (await list(fake, NOW, OWNER, plan)({ since: "2026-08-01" })) as EventsListResult
+      expect(opened.gap).toBeUndefined()
+      expect(opened.events.map((event) => event.external_id)).toContain("w-00")
+    }
+  })
+
+  test("applies the 30-day cutoff only when the plan is known to be free, and lists from 29 days ago", async () => {
     const old = encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: NOW - VISIBLE_MS - 10 * 86_400_000, i: "" })
     const fake = wisprflow(2, [...MEETINGS, { id: "w-00", title: "Locked on the free plan", start_time: new Date(NOW - VISIBLE_MS - 86_400_000).toISOString(), attendees: [] }])
-    const first = (await list(fake)({ account: ACCOUNT, cursor: old, limit: 2 })) as EventsListResult
+    const first = (await list(fake, NOW, OWNER, "free")({ account: ACCOUNT, cursor: old, limit: 2 })) as EventsListResult
     expect(resultProblems(first, 2, MAX_BYTES)).toEqual([])
     expect(first.gap).toEqual({ reason: "expired", since: new Date(NOW - VISIBLE_MS - 10 * 86_400_000).toISOString() })
     expect(first.events.map((event) => event.external_id)).toEqual(EXPECTED.slice(0, 2))
+    expect(first.events.map((event) => event.external_id)).not.toContain("w-00")
     expect(Math.min(...fake.calls.map((call) => Date.parse(String(call.since))))).toBeGreaterThanOrEqual(NOW - VISIBLE_MS - 1000)
     expect(first.more).toBe(true)
-    const second = (await list(fake)({ account: ACCOUNT, cursor: first.cursor, limit: 2 })) as EventsListResult
+    const second = (await list(fake, NOW, OWNER, "free")({ account: ACCOUNT, cursor: first.cursor, limit: 2 })) as EventsListResult
     expect(second.gap).toBeUndefined()
     expect(second.events.map((event) => event.external_id)).toEqual(EXPECTED.slice(2, 4))
-    // A first listing from a since before the window answers the same gap; one inside it answers none.
-    expect(((await list()({ since: "2026-08-01" })) as EventsListResult).gap).toEqual({ reason: "expired", since: "2026-08-01T00:00:00.000Z" })
-    expect(((await list()({ since: SINCE })) as EventsListResult).gap).toBeUndefined()
+    expect(((await list(undefined, NOW, OWNER, "free")({ since: "2026-08-01" })) as EventsListResult).gap).toEqual({ reason: "expired", since: "2026-08-01T00:00:00.000Z" })
+    expect(((await list(undefined, NOW, OWNER, "free")({ since: SINCE })) as EventsListResult).gap).toBeUndefined()
   })
 
   test("lists a meeting that reached Wispr Flow after the cursor passed it, once, and nothing twice", async () => {

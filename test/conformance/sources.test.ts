@@ -83,6 +83,20 @@ function context(permission: SessionContext["permission"]): EventsContext {
 const ATOMIC = "events_list makes no call per meeting: every meeting comes whole from a search_meetings listing, and a failed search_meetings call fails the whole events_list call, so no single meeting fails on its own"
 /** Why a cursor does not expire here: no tool names the plan, so the listing does not invent a free-plan cutoff. */
 const NO_EXPIRY = "No Wispr Flow tool names the plan, so a listing does not invent a 30-day free-plan cutoff and a cursor does not expire here. A 30-day cutoff applies only when the plan is known to be free"
+/**
+ * v0.3 checks this source carries nothing for. The kit marks each not applicable and states no reason of its own; an
+ * empty reason would be no reason, so the test states why. A meeting's actor is role attendee or creator, not from or
+ * author.
+ */
+const ABSENT = {
+  "actor-kind": "the fixture names no machine actor, so actor-kind does not apply",
+  "commitment-key": "no page carries a commitment, so commitment-key does not apply",
+  facts: "no page carries a fact, so facts does not apply",
+  hints: "the source declares no hint file, so hints does not apply",
+  "one-author": "no page lists a from or author actor, so one-author does not apply",
+  "parts-stable": "no page carries a part, so parts-stable does not apply",
+  routines: "the source declares no routine file, so routines does not apply",
+}
 
 const call = (): ToolCall => ({ sessionID: "ses_conformance", agent: "build", messageID: "msg_script", id: "script:conformance", signal: new AbortController().signal, progress: async () => {} })
 const open: SessionContext = { account: ACCOUNT, permission: { assert: async () => {} } }
@@ -157,6 +171,10 @@ describe("the source contract's conformance kit", () => {
     expect(report.checks.find((check) => check.name === "gap-and-cursor-expired")).toMatchObject({ ran: false, notApplicable: true, reason: NO_EXPIRY })
     expect(report.checks.filter((check) => check.reason !== undefined).map((check) => check.name)).toEqual(["failed-holds-cursor", "gap-and-cursor-expired"])
     expect(report.ok).toBe(true)
+    for (const [name, reason] of Object.entries(ABSENT)) {
+      expect(reason.trim()).not.toBe("")
+      expect(report.checks.find((check) => check.name === name)).toMatchObject({ ran: false, notApplicable: true, problems: [] })
+    }
   })
 
   test("wisprflow.meetings.list keeps the contract", async () => {
@@ -191,6 +209,10 @@ describe("the source contract's conformance kit", () => {
     expect(report.checks.find((check) => check.name === "gap-and-cursor-expired")).toMatchObject({ ran: false, notApplicable: true })
     expect(report.ok).toBe(true)
     expect(report.incomplete).toBe(false)
+    for (const [name, reason] of Object.entries(ABSENT)) {
+      expect(reason.trim()).not.toBe("")
+      expect(report.checks.find((check) => check.name === name)).toMatchObject({ ran: false, notApplicable: true, problems: [] })
+    }
   })
 
   test("writes the report a release attaches", () => {

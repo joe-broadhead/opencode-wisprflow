@@ -182,10 +182,13 @@ describe("the source contract's conformance kit", () => {
       account: ACCOUNT,
       sources,
       describe: { id: TOOLS_RPC_ID },
+      noExpiry: { reason: NO_EXPIRY },
     })
     reports.push(report)
     expect(report.problems).toEqual([])
     expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual([])
+    // The snapshot has no cursor either, and the source states why: no tool names the plan, so none expires here.
+    expect(report.checks.find((check) => check.name === "gap-and-cursor-expired")).toMatchObject({ ran: false, notApplicable: true })
     expect(report.ok).toBe(true)
     expect(report.incomplete).toBe(false)
   })

@@ -341,13 +341,16 @@ that shares a start with one still waiting, and always within the cursor's 1024 
 without a tag is listed then, once, out of start order with the earlier pages but oldest first within its page. A
 meeting you delete before it is listed is never listed, and one already listed is not withdrawn.
 
-On Wispr Flow's free plan, meetings older than 30 days are locked until the account upgrades, and Wispr Flow has no
-tool that names the plan, so every sign-in is read as if it showed only the last 30 days, with a day's margin for clock
-skew and Wispr Flow's rounding. A read that starts earlier (a cursor, or a `since`, more than 29 days old) answers
-`gap: { reason: "expired", since }` on its first page, `since` being where it started, and lists from 29 days ago:
-meetings before that may be locked, and on a paid plan they are not listed here either (`search_meetings` still reads
-them). The cursor carries that line, so the read's later pages carry no gap, however much later they are read, unless
-the read pauses long enough for its position to fall behind the real 30 days: that is a new loss, and a new gap.
+A 30-day cutoff applies only when the plan is known to be free. No Wispr Flow tool names the plan, so a listing does
+not treat a sign-in as free and does not invent that cutoff: it lists the meetings `search_meetings` returns, including
+ones older than 30 days, and it does not answer `gap: { reason: "expired", since }` for a meeting the API returned or
+for a read that merely started more than 30 days ago. If `search_meetings` itself returns only the last 30 days, that
+is Wispr Flow's limit, and this listing does not drop those meetings a second time. When the plan is known to be free,
+meetings older than 30 days are locked until the account upgrades, with a day's margin for clock skew and Wispr Flow's
+rounding. A read that starts earlier (a cursor, or a `since`, more than 29 days old) answers
+`gap: { reason: "expired", since }` on its first page, `since` being where it started, and lists from 29 days ago. The
+cursor carries that line, so the read's later pages carry no gap, however much later they are read, unless the read
+pauses long enough for its position to fall behind the real 30 days: that is a new loss, and a new gap.
 
 A week Wispr Flow caps (more than 1000 meetings) is split and read again, so the cap loses nothing. A minute it still
 caps is a hole: the page before it stops short of it, and the next page answers `gap: { reason: "window-truncated",

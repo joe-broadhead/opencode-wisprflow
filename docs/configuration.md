@@ -318,7 +318,7 @@ events_list({ source: "wisprflow", list: "meetings", account? })
   → { source: "wisprflow", account: "default", data: { items, editable: false }, asOf, trust: "untrusted" }
 ```
 
-`wisprflow.meetings.list` is a snapshot. Its `tool` is `events_list`, its `output` is `list`, and its `input` is `{ "source": "wisprflow", "list": "meetings" }`. It calls `search_meetings` for the last 29 days and returns at most 50 titles. `permission.tool` is `wisprflow_events_list`. `permission.operations` is `search_meetings`. `private` is true. `cost` is free. `maxAgeSec` is 900. `maxBytes` is 65,536. A title that holds a secret is left out. `wisprflow.meetings` is not renamed.
+`wisprflow.meetings.list` is a snapshot. Its `tool` is `events_list`, its `output` is `list`, and its `input` is `{ "source": "wisprflow", "list": "meetings" }` on the tools RPC method only; the model tool's schema has no `list`. It calls `search_meetings` for the last 29 days and returns at most 50 titles, newest first. A title is screened whole and then cut to 200 characters, control characters are stripped, an id appears once, and the answer stops short of 64 KiB. `permission.tool` is `wisprflow_events_list`. `permission.operations` is `search_meetings`. `private` is true. `cost` is free. `maxAgeSec` is 900. `maxBytes` is 65,536. `wisprflow.meetings` is not renamed.
 
 | Input | Meaning |
 | --- | --- |
@@ -346,16 +346,13 @@ that shares a start with one still waiting, and always within the cursor's 1024 
 without a tag is listed then, once, out of start order with the earlier pages but oldest first within its page. A
 meeting you delete before it is listed is never listed, and one already listed is not withdrawn.
 
-A 30-day cutoff applies only when the plan is known to be free. No Wispr Flow tool names the plan, so a listing does
-not treat a sign-in as free and does not invent that cutoff: it lists the meetings `search_meetings` returns, including
-ones older than 30 days, and it does not answer `gap: { reason: "expired", since }` for a meeting the API returned or
-for a read that merely started more than 30 days ago. If `search_meetings` itself returns only the last 30 days, that
-is Wispr Flow's limit, and this listing does not drop those meetings a second time. When the plan is known to be free,
-meetings older than 30 days are locked until the account upgrades, with a day's margin for clock skew and Wispr Flow's
-rounding. A read that starts earlier (a cursor, or a `since`, more than 29 days old) answers
-`gap: { reason: "expired", since }` on its first page, `since` being where it started, and lists from 29 days ago. The
-cursor carries that line, so the read's later pages carry no gap, however much later they are read, unless the read
-pauses long enough for its position to fall behind the real 30 days: that is a new loss, and a new gap.
+On Wispr Flow's free plan, meetings older than 30 days are locked until the account upgrades, and Wispr Flow has no
+tool that names the plan, so every sign-in is read as if it showed only the last 30 days, with a day's margin for clock
+skew and Wispr Flow's rounding. A read that starts earlier (a cursor, or a `since`, more than 29 days old) answers
+`gap: { reason: "expired", since }` on its first page, `since` being where it started, and lists from 29 days ago:
+meetings before that may be locked, and on a paid plan they are not listed here either (`search_meetings` still reads
+them). The cursor carries that line, so the read's later pages carry no gap, however much later they are read, unless
+the read pauses long enough for its position to fall behind the real 30 days: that is a new loss, and a new gap.
 
 A week Wispr Flow caps (more than 1000 meetings) is split and read again, so the cap loses nothing. A minute it still
 caps is a hole: the page before it stops short of it, and the next page answers `gap: { reason: "window-truncated",

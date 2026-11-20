@@ -65,14 +65,14 @@ the checks and the release steps.
   `probe` (`wisprflow_probe`, a tools RPC method only) names who is signed in. `src/events.ts` implements both with the
   package's `events` and `cursor` modules. Wispr Flow has no tool that names the account, so the owner, in every page
   and in `probe`, is OpenCode's sign-in for the server; `probe` calls Wispr Flow for nothing. The declared operations
-  are exactly the Wispr Flow tools the reads call (`search_meetings`). `test/conformance/` runs the package's
+  are exactly the Wispr Flow tools the reads call (`search_meetings`). The list snapshot's `list` input is on the tools
+  RPC method only: the model tool has no `list`. It reads the last 29 days, sorts newest first, and returns at most 50
+  titles, each screened whole and cut to 200 characters. `test/conformance/` runs the package's
   conformance kit over the declaration (the `conformance` stage, and `npm run conformance`, which a release runs) and
-  writes `reports/conformance-report.json`, which must say `ok: true`. `atomicPages` is declared, with its reason.
-  Declare `noExpiry` too: no Wispr Flow tool names the plan, so a listing does not invent a 30-day free-plan cutoff and
-  a cursor does not expire here. A 30-day cutoff (`VISIBLE_MS` less `MARGIN_MS`, a `gap` of `expired`, the restart line
-  carried as `g`) applies only when the plan is known to be free, which this plugin cannot read. Do not answer that gap
-  for a meeting `search_meetings` returned. If `search_meetings` itself returns only 30 days, that is Wispr Flow's
-  limit: do not drop those meetings a second time. Every other check that applies must run.
+  writes `reports/conformance-report.json`, which must say `ok: true`. Only `atomicPages` is declared, with its
+  reason; every other check that applies must run. Never declare `noExpiry`: the free plan locks meetings older than
+  30 days, so a read that starts more than 29 days ago (`VISIBLE_MS` less `MARGIN_MS`) answers a `gap` (`expired`)
+  once and restarts at that line, which its cursor carries (`g`) so the read's later pages never gap again.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
   `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`. On
   2.3.1 and later the harness builds that host through `PromiseSdk.create`, which `OpenCode.create` calls, with the

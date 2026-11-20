@@ -156,6 +156,14 @@ describe(`the plugin's own server on OpenCode ${HOST_VERSION}`, () => {
     expect(await effect(host, "build", `wisprflow_${NEW}`)).toBe("allow")
   })
 
+  test("the list snapshot answers through the tools RPC, and the model tool has no list", async () => {
+    const build = await session(host)
+    const result = (await host.client.rpc.call({ rpcID: "wisprflow.meetings.tools", method: "events_list", input: { sessionID: build, input: { source: "wisprflow", list: "meetings", account: "default" } } as never, location: host.location })).output
+    expect(result).toMatchObject({ source: "wisprflow", account: "default", data: { items: [], editable: false }, trust: "untrusted" })
+    const described = (await host.client.rpc.call({ rpcID: "wisprflow.meetings.tools", method: "describe", input: {} as never, location: host.location })).output as { methods: { name: string; input: { properties: Record<string, unknown> } }[] }
+    expect(Object.keys(described.methods.find((method) => method.name === "events_list")!.input.properties)).toContain("list")
+  })
+
   test("P5: an agent defined only in user config gets no rules, and Wispr Flow tools run there unprompted", async () => {
     const reviewer = (await agentRules(host)).get("reviewer")!
     expect(reviewer.some((rule) => rule.action.startsWith("wisprflow_"))).toBe(false)

@@ -7,11 +7,12 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 
 - **List snapshot** `wisprflow.meetings.list` (`output: "list"`). An app can bind it and render meetings without
-  knowing Wispr Flow. It calls the existing `events_list` read (`search_meetings`), not a second client: `{ "source":
-  "wisprflow", "list": "meetings" }` reads the last 29 days and returns at most 50 meetings, each an id and a title,
-  and a title that holds a secret is left out. `wisprflow.meetings` stays the events source and is not renamed, and no
-  write is declared. The snapshot states the same `noExpiry` reason as the events source: no Wispr Flow tool names the
-  plan, so neither read invents a cutoff and no cursor expires here.
+  knowing Wispr Flow. It is the tools RPC method `events_list` with `{ "source": "wisprflow", "list": "meetings" }`:
+  the model tool's schema has no `list`, so an agent sees no list. It calls the existing `search_meetings` read, not a
+  second client, over the last 29 days and returns at most 50 meetings, newest first, each an id and a title; a title is
+  screened whole and then cut to 200 characters, control characters are stripped, an id appears once, and the answer
+  stops short of 64 KiB. It has no cursor. `wisprflow.meetings` stays the events
+  source and is not renamed, and no write is declared.
 
 ### Changed
 
@@ -19,14 +20,10 @@ All notable changes to this project are documented here. The format follows [Kee
   (no runtime dependency). The declaration and the probe answer are unchanged: the plugin sends none of v0.3.0's new
   keys (`facts`, `hints`, `routines`, an actor's `kind`, `sections` or `parts`), which a consumer still on v0.2.0
   refuses. The conformance test names the seven v0.3 checks the source carries nothing for, each with its reason.
+- A listing still reads every sign-in as the free plan, because no Wispr Flow tool names the plan: a read that starts
+  more than 29 days ago answers `gap: { reason: "expired" }` once and lists from 29 days ago, so a meeting the plan has
+  locked is never skipped silently.
 
-### Fixed
-
-- For Memory: a paid or unknown plan is no longer read as a 30-day free plan. No Wispr Flow tool names the plan, so a
-  listing does not invent that cutoff: it lists what `search_meetings` returns, including meetings older than 30 days,
-  and it does not answer `gap: { reason: "expired", since }` for a meeting the API returned. A 30-day cutoff applies
-  only when the plan is known to be free. If `search_meetings` itself returns only 30 days, that is Wispr Flow's limit,
-  and the listing does not drop those meetings a second time.
 
 ## [0.0.6] - 2026-11-18
 

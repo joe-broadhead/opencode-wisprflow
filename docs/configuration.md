@@ -4,7 +4,7 @@ Every option is optional. The smallest setup is one entry in `plugins`:
 
 ```json
 {
-  "plugins": ["github:joe-broadhead/opencode-wisprflow#v0.0.6"]
+  "plugins": ["github:joe-broadhead/opencode-wisprflow#v0.0.7"]
 }
 ```
 
@@ -12,7 +12,7 @@ To set options, use the object form:
 
 ```json
 {
-  "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.6", "options": { "allowUntestedHost": true } }]
+  "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.7", "options": { "allowUntestedHost": true } }]
 }
 ```
 
@@ -292,7 +292,7 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 For example:
 
 ```text
-OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the default), found "yes". Next step: Fix the plugin options in opencode.json, for example "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.6", "options": { "allowUntestedHost": true } }].
+OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the default), found "yes". Next step: Fix the plugin options in opencode.json, for example "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.7", "options": { "allowUntestedHost": true } }].
 ```
 
 Errors from Wispr Flow's server and from OpenCode pass through unchanged, except in the tools RPC for scripts, whose
@@ -301,7 +301,7 @@ this feature." or "Too many requests", are listed in the README's Troubleshootin
 
 ## Events list
 
-`package.json`'s `sources` declares one source under source-contract version 1, `wisprflow.meetings`
+`package.json`'s `sources` declares `wisprflow.meetings` and the list snapshot `wisprflow.meetings.list` under source-contract version 1. `wisprflow.meetings`
 (`@we-the-rebel-alliance/source-contract`): `wisprflow_events_list` (`tools.wisprflow.events_list` in Code Mode, and
 the tools RPC method `events_list`) lists the meetings Wispr Flow captured since a cursor, as normalised events, oldest
 first, and the tools RPC method `probe` names who is signed in. Both only read, never ask and call no model, so a
@@ -313,7 +313,12 @@ probe({ source?, account? })
 
 events_list({ since?, cursor?, limit?, account?, source? })
   → { source: "wisprflow", account: "default", owner: { id, label }, events, cursor, more, refused?, gap?, plugin, asOf, trust: "untrusted" }
+
+events_list({ source: "wisprflow", list: "meetings", account? })
+  → { source: "wisprflow", account: "default", data: { items, editable: false }, asOf, trust: "untrusted" }
 ```
+
+`wisprflow.meetings.list` is a snapshot. Its `tool` is `events_list`, its `output` is `list`, and its `input` is `{ "source": "wisprflow", "list": "meetings" }` on the tools RPC method only; the model tool's schema has no `list`. It calls `search_meetings` for the last 29 days and returns at most 50 titles, newest first. A title is screened whole and then cut to 200 characters, control characters are stripped, an id appears once, and the answer stops short of 64 KiB. `permission.tool` is `wisprflow_events_list`. `permission.operations` is `search_meetings`. `private` is true. `cost` is free. `maxAgeSec` is 900. `maxBytes` is 65,536. `wisprflow.meetings` is not renamed.
 
 | Input | Meaning |
 | --- | --- |
@@ -321,7 +326,7 @@ events_list({ since?, cursor?, limit?, account?, source? })
 | `cursor` | The previous result's cursor. It wins over `since`, and needs `account`. |
 | `limit` | Most events, 1 to 500; 100 by default. A result also stops before 64 KiB of JSON. |
 | `account` | `default`, Wispr Flow's one account, as `probe` names it. Required with a cursor. |
-| `source` | `wisprflow`, the one source. |
+| `source` | `wisprflow`. |
 
 It asserts `wisprflow_events_list`, then reads through OpenCode's own `wisprflow_search_meetings`, whose rule applies
 too: one week at a time, with `since` and `until` as UTC times and `limit: 200`, every page while `has_more`. It

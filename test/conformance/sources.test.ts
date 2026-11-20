@@ -27,7 +27,7 @@ const sources: Sources = checked.value
 const CONTRACT_VERSION = (JSON.parse(readFileSync(join(root, "node_modules", "@we-the-rebel-alliance", "source-contract", "package.json"), "utf8")) as { version: string }).version
 const tools = pkg.jelly.tools.map((tool) => ({ id: tool.name.replace(/^wisprflow\./, ""), readOnly: tool.readOnly }))
 
-/** Inside the 30 days Wispr Flow's free plan shows: SINCE and every meeting below are within them. */
+/** Inside the 30 days the free plan shows: SINCE and every meeting below are within them. */
 const NOW = Date.parse("2026-10-25T12:00:00Z")
 const SINCE = "2026-09-28"
 /** OpenCode's sign-in for wisprflow: its label is the integration's name, so the owner is the credential. */
@@ -81,6 +81,20 @@ function context(permission: SessionContext["permission"]): EventsContext {
  * Wispr Flow page), and any search_meetings call that fails fails the whole events_list call, so there is no partial page.
  */
 const ATOMIC = "events_list makes no call per meeting: every meeting comes whole from a search_meetings listing, and a failed search_meetings call fails the whole events_list call, so no single meeting fails on its own"
+/**
+ * v0.3 checks this source carries nothing for. The kit marks each not applicable and states no reason of its own; an
+ * empty reason would be no reason, so the test states why. A meeting's actor is role attendee or creator, not from or
+ * author.
+ */
+const ABSENT = {
+  "actor-kind": "the fixture names no machine actor, so actor-kind does not apply",
+  "commitment-key": "no page carries a commitment, so commitment-key does not apply",
+  facts: "no page carries a fact, so facts does not apply",
+  hints: "the source declares no hint file, so hints does not apply",
+  "one-author": "no page lists a from or author actor, so one-author does not apply",
+  "parts-stable": "no page carries a part, so parts-stable does not apply",
+  routines: "the source declares no routine file, so routines does not apply",
+}
 
 const call = (): ToolCall => ({ sessionID: "ses_conformance", agent: "build", messageID: "msg_script", id: "script:conformance", signal: new AbortController().signal, progress: async () => {} })
 const open: SessionContext = { account: ACCOUNT, permission: { assert: async () => {} } }
@@ -122,7 +136,11 @@ describe("the source contract's conformance kit", () => {
     expect(declarationProblems(pkg.sources, { tools })).toEqual([])
     expect(sources.rpc).toBe(TOOLS_RPC_ID)
     expect(pkg.name).toBe(PACKAGE)
-    expect(sources.items.map((item) => [item.id, item.kind])).toEqual([[SOURCE_ID, "events"]])
+    expect(sources.items.map((item) => [item.id, item.kind])).toEqual([
+      [SOURCE_ID, "events"],
+      ["wisprflow.meetings.list", "snapshot"],
+    ])
+    expect(sources.items.find((item) => item.id === "wisprflow.meetings.list")).toMatchObject({ output: "list", tool: "events_list" })
   })
 
   test(`${SOURCE_ID} keeps the contract`, async () => {
@@ -149,10 +167,51 @@ describe("the source contract's conformance kit", () => {
     expect(report.checks.filter((check) => check.ran).map((check) => check.name)).toEqual(expect.arrayContaining(["gap-and-cursor-expired", "gap-once-per-read", "refused-is-final", "probe"]))
     expect(report.checks.filter((check) => check.reason !== undefined).map((check) => check.name)).toEqual(["failed-holds-cursor"])
     expect(report.ok).toBe(true)
+    for (const [name, reason] of Object.entries(ABSENT)) {
+      expect(reason.trim()).not.toBe("")
+      expect(report.checks.find((check) => check.name === name)).toMatchObject({ ran: false, notApplicable: true, problems: [] })
+    }
+  })
+
+  test("wisprflow.meetings.list keeps the contract", async () => {
+    const listed = sources.items.find((item) => item.id === "wisprflow.meetings.list")!
+    const snapshot = (await eventsMethod(context(open.permission), () => true, () => NOW).run({ source: "wisprflow", list: "meetings", account: ACCOUNT }, call())) as {
+      data: { items: { id: string; text: string }[]; editable: boolean }
+      trust: string
+    }
+    expect(snapshot.trust).toBe("untrusted")
+    expect(snapshot.data.editable).toBe(false)
+    expect(snapshot.data.items.map((item) => item.id)).toContain("w-01")
+    expect(snapshot.data.items.map((item) => item.id)).not.toContain("w-03")
+    const report = await sourceConformance({
+      plugin: pkg.name,
+      source: listed,
+      tools,
+      calls: {
+        snapshot: (input, session) => eventsMethod(context(session.permission), () => true, () => NOW).run(input, call()) as Promise<Record<string, unknown>>,
+        probe: (input, session) => probeMethod(context(session.permission), () => true).run(input, call()),
+      },
+      snapshotCases: [{ ...(listed.input ?? {}), account: ACCOUNT }],
+      cases: [],
+      account: ACCOUNT,
+      sources,
+      describe: { id: TOOLS_RPC_ID },
+    })
+    reports.push(report)
+    expect(report.problems).toEqual([])
+    expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual([])
+    // The snapshot has no cursor, so the expired-cursor check does not apply.
+    expect(report.checks.find((check) => check.name === "gap-and-cursor-expired")).toMatchObject({ ran: false, notApplicable: true })
+    expect(report.ok).toBe(true)
+    expect(report.incomplete).toBe(false)
+    for (const [name, reason] of Object.entries(ABSENT)) {
+      expect(reason.trim()).not.toBe("")
+      expect(report.checks.find((check) => check.name === name)).toMatchObject({ ran: false, notApplicable: true, problems: [] })
+    }
   })
 
   test("writes the report a release attaches", () => {
-    expect(reports.map((report) => report.source)).toEqual([SOURCE_ID])
+    expect(reports.map((report) => report.source).sort()).toEqual([SOURCE_ID, "wisprflow.meetings.list"].sort())
     const installed = readInstalledDescriptor(root, { version: pkg.version })
     const report = {
       contract: `@we-the-rebel-alliance/source-contract@${CONTRACT_VERSION}`,

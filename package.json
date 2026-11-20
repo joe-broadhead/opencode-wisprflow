@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-wisprflow",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "private": true,
   "description": "Unofficial OpenCode plugin for Wispr Flow: search and read your Notetaker meetings, transcripts, Scratchpad notes and calendar through Wispr Flow's official MCP server",
   "keywords": [
@@ -96,6 +96,31 @@
           "class": "free"
         },
         "maxBytes": 65536
+      },
+      {
+        "id": "wisprflow.meetings.list",
+        "kind": "snapshot",
+        "tool": "events_list",
+        "input": {
+          "source": "wisprflow",
+          "list": "meetings"
+        },
+        "output": "list",
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "tool": "wisprflow_events_list",
+          "operations": [
+            "search_meetings"
+          ]
+        },
+        "private": true,
+        "cost": {
+          "class": "free"
+        },
+        "maxAgeSec": 900,
+        "maxBytes": 65536
       }
     ]
   },
@@ -119,7 +144,7 @@
     "@opentui/solid": "0.8.0",
     "@types/bun": "1.4.4",
     "@types/node": "24.19.2",
-    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.2.0",
+    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.3.0",
     "esbuild": "0.28.2",
     "solid-js": "1.9.17",
     "typescript": "5.9.3"

@@ -9,6 +9,7 @@ import {
   ACCOUNT,
   EVENTS_ACTION,
   EVENTS_INPUT,
+  EVENTS_RPC_INPUT,
   EventsFailure,
   MAX_BYTES,
   PROBE_ACTION,
@@ -17,6 +18,7 @@ import {
   VISIBLE_MS,
   eventsMethod,
   listEvents,
+  meetingsList,
   probeMethod,
   readMeetingsPage,
   resultData,
@@ -108,6 +110,27 @@ const code = async (promise: Promise<unknown>) => {
     return error instanceof EventsFailure ? error.code : String(error)
   }
 }
+
+describe("wisprflow.meetings.list", () => {
+  test("keeps list off the model tool, and on the tools RPC method", () => {
+    expect(Object.keys(EVENTS_INPUT.properties)).not.toContain("list")
+    expect(Object.keys(EVENTS_RPC_INPUT.properties)).toContain("list")
+  })
+
+  test("sorts newest first before the cap", async () => {
+    const search = async () => ({ meetings: [...MEETINGS].reverse().map((meeting) => ({ ...meeting, end_time: meeting.start_time, folders: null })), has_more: false })
+    const answer = await meetingsList(search, { account: ACCOUNT, list: "meetings" }, NOW)
+    expect(answer.data.items.slice(0, 2).map((item) => item.id)).toEqual(["w-06", "w-05"])
+  })
+
+  test("screens the whole title before the cut, and lists an id once", async () => {
+    const straddling = { id: "w-cut", title: `${"x".repeat(199)} ghp_A1b2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8`, start_time: "2026-10-20T10:00:00Z", attendees: [] }
+    const duplicate = { id: "w-dup", title: "Once", start_time: "2026-10-21T10:00:00Z", attendees: [] }
+    const search = async () => ({ meetings: [straddling, duplicate, duplicate].map((meeting) => ({ ...meeting, end_time: meeting.start_time, folders: null })), has_more: false })
+    const answer = await meetingsList(search, { account: ACCOUNT, list: "meetings" }, NOW)
+    expect(answer.data.items).toEqual([{ id: "w-dup", text: "Once" }])
+  })
+})
 
 describe("Wispr Flow's search_meetings result", () => {
   test("reads meetings, their attendees, owner, share_link and flags, and the cursor only while has_more", () => {

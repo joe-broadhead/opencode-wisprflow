@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7] - 2026-11-20
+
+### Added
+
+- **List snapshot** `wisprflow.meetings.list` (`output: "list"`). An app can bind it and render meetings without
+  knowing Wispr Flow. It is the tools RPC method `events_list` with `{ "source": "wisprflow", "list": "meetings" }`:
+  the model tool's schema has no `list`, so an agent sees no list. It calls the existing `search_meetings` read, not a
+  second client, over the last 29 days and returns at most 50 meetings, newest first, each an id and a title; a title is
+  screened whole and then cut to 200 characters, control characters are stripped, an id appears once, and the answer
+  stops short of 64 KiB. It has no cursor. `wisprflow.meetings` stays the events
+  source and is not renamed, and no write is declared.
+
+### Changed
+
+- Source contract `@we-the-rebel-alliance/source-contract` v0.3.0 (was v0.2.0), a devDependency bundled into `dist/`
+  (no runtime dependency). The declaration and the probe answer are unchanged: the plugin sends none of v0.3.0's new
+  keys (`facts`, `hints`, `routines`, an actor's `kind`, `sections` or `parts`), which a consumer still on v0.2.0
+  refuses. The conformance test names the seven v0.3 checks the source carries nothing for, each with its reason.
+- A listing still reads every sign-in as the free plan, because no Wispr Flow tool names the plan: a read that starts
+  more than 29 days ago answers `gap: { reason: "expired" }` once and lists from 29 days ago, so a meeting the plan has
+  locked is never skipped silently.
+
+
 ## [0.0.6] - 2026-11-18
 
 ### Changed

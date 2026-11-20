@@ -2,11 +2,23 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.7] - 2026-11-20
 
 ### Added
 
-- **List snapshot** `wisprflow.meetings.list` (`output: "list"`). An app can bind it and render meetings without knowing Wispr Flow. It calls the existing `events_list` read (`search_meetings`), not a second client. `wisprflow.meetings` stays the events source and is not renamed. No write is declared. The source-contract pin stays v0.2.0: `list` is already in that pin, and this change sends none of v0.3.0's new fields.
+- **List snapshot** `wisprflow.meetings.list` (`output: "list"`). An app can bind it and render meetings without
+  knowing Wispr Flow. It calls the existing `events_list` read (`search_meetings`), not a second client: `{ "source":
+  "wisprflow", "list": "meetings" }` reads the last 29 days and returns at most 50 meetings, each an id and a title,
+  and a title that holds a secret is left out. `wisprflow.meetings` stays the events source and is not renamed, and no
+  write is declared. The snapshot states the same `noExpiry` reason as the events source: no Wispr Flow tool names the
+  plan, so neither read invents a cutoff and no cursor expires here.
+
+### Changed
+
+- Source contract `@we-the-rebel-alliance/source-contract` v0.3.0 (was v0.2.0), a devDependency bundled into `dist/`
+  (no runtime dependency). The declaration and the probe answer are unchanged: the plugin sends none of v0.3.0's new
+  keys (`facts`, `hints`, `routines`, an actor's `kind`, `sections` or `parts`), which a consumer still on v0.2.0
+  refuses. The conformance test names the seven v0.3 checks the source carries nothing for, each with its reason.
 
 ### Fixed
 

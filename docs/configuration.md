@@ -301,7 +301,7 @@ this feature." or "Too many requests", are listed in the README's Troubleshootin
 
 ## Events list
 
-`package.json`'s `sources` declares one source under source-contract version 1, `wisprflow.meetings`
+`package.json`'s `sources` declares `wisprflow.meetings` and the list snapshot `wisprflow.meetings.list` under source-contract version 1. `wisprflow.meetings`
 (`@we-the-rebel-alliance/source-contract`): `wisprflow_events_list` (`tools.wisprflow.events_list` in Code Mode, and
 the tools RPC method `events_list`) lists the meetings Wispr Flow captured since a cursor, as normalised events, oldest
 first, and the tools RPC method `probe` names who is signed in. Both only read, never ask and call no model, so a
@@ -313,7 +313,12 @@ probe({ source?, account? })
 
 events_list({ since?, cursor?, limit?, account?, source? })
   → { source: "wisprflow", account: "default", owner: { id, label }, events, cursor, more, refused?, gap?, plugin, asOf, trust: "untrusted" }
+
+events_list({ source: "wisprflow", list: "meetings", account? })
+  → { source: "wisprflow", account: "default", data: { items, editable: false }, asOf, trust: "untrusted" }
 ```
+
+`wisprflow.meetings.list` is a snapshot. Its `tool` is `events_list`, its `output` is `list`, and its `input` is `{ "source": "wisprflow", "list": "meetings" }`. It calls `search_meetings` for the last 29 days and returns at most 50 titles. `permission.tool` is `wisprflow_events_list`. `permission.operations` is `search_meetings`. `private` is true. `cost` is free. `maxAgeSec` is 900. `maxBytes` is 65,536. A title that holds a secret is left out. `wisprflow.meetings` is not renamed.
 
 | Input | Meaning |
 | --- | --- |
@@ -321,7 +326,7 @@ events_list({ since?, cursor?, limit?, account?, source? })
 | `cursor` | The previous result's cursor. It wins over `since`, and needs `account`. |
 | `limit` | Most events, 1 to 500; 100 by default. A result also stops before 64 KiB of JSON. |
 | `account` | `default`, Wispr Flow's one account, as `probe` names it. Required with a cursor. |
-| `source` | `wisprflow`, the one source. |
+| `source` | `wisprflow`. |
 
 It asserts `wisprflow_events_list`, then reads through OpenCode's own `wisprflow_search_meetings`, whose rule applies
 too: one week at a time, with `since` and `until` as UTC times and `limit: 200`, every page while `has_more`. It

@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- **List snapshot** `wisprflow.meetings.list` (`output: "list"`). An app can bind it and render meetings without knowing Wispr Flow. It calls the existing `events_list` read (`search_meetings`), not a second client. `wisprflow.meetings` stays the events source and is not renamed. No write is declared. The source-contract pin stays v0.2.0: `list` is already in that pin, and this change sends none of v0.3.0's new fields.
+
 ### Fixed
 
 - For Memory: a paid or unknown plan is no longer read as a 30-day free plan. No Wispr Flow tool names the plan, so a

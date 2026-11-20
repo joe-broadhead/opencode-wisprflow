@@ -124,7 +124,11 @@ describe("the source contract's conformance kit", () => {
     expect(declarationProblems(pkg.sources, { tools })).toEqual([])
     expect(sources.rpc).toBe(TOOLS_RPC_ID)
     expect(pkg.name).toBe(PACKAGE)
-    expect(sources.items.map((item) => [item.id, item.kind])).toEqual([[SOURCE_ID, "events"]])
+    expect(sources.items.map((item) => [item.id, item.kind])).toEqual([
+      [SOURCE_ID, "events"],
+      ["wisprflow.meetings.list", "snapshot"],
+    ])
+    expect(sources.items.find((item) => item.id === "wisprflow.meetings.list")).toMatchObject({ output: "list", tool: "events_list" })
   })
 
   test(`${SOURCE_ID} keeps the contract`, async () => {
@@ -155,8 +159,39 @@ describe("the source contract's conformance kit", () => {
     expect(report.ok).toBe(true)
   })
 
+  test("wisprflow.meetings.list keeps the contract", async () => {
+    const listed = sources.items.find((item) => item.id === "wisprflow.meetings.list")!
+    const snapshot = (await eventsMethod(context(open.permission), () => true, () => NOW).run({ source: "wisprflow", list: "meetings", account: ACCOUNT }, call())) as {
+      data: { items: { id: string; text: string }[]; editable: boolean }
+      trust: string
+    }
+    expect(snapshot.trust).toBe("untrusted")
+    expect(snapshot.data.editable).toBe(false)
+    expect(snapshot.data.items.map((item) => item.id)).toContain("w-01")
+    expect(snapshot.data.items.map((item) => item.id)).not.toContain("w-03")
+    const report = await sourceConformance({
+      plugin: pkg.name,
+      source: listed,
+      tools,
+      calls: {
+        snapshot: (input, session) => eventsMethod(context(session.permission), () => true, () => NOW).run(input, call()) as Promise<Record<string, unknown>>,
+        probe: (input, session) => probeMethod(context(session.permission), () => true).run(input, call()),
+      },
+      snapshotCases: [{ ...(listed.input ?? {}), account: ACCOUNT }],
+      cases: [],
+      account: ACCOUNT,
+      sources,
+      describe: { id: TOOLS_RPC_ID },
+    })
+    reports.push(report)
+    expect(report.problems).toEqual([])
+    expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual([])
+    expect(report.ok).toBe(true)
+    expect(report.incomplete).toBe(false)
+  })
+
   test("writes the report a release attaches", () => {
-    expect(reports.map((report) => report.source)).toEqual([SOURCE_ID])
+    expect(reports.map((report) => report.source).sort()).toEqual([SOURCE_ID, "wisprflow.meetings.list"].sort())
     const installed = readInstalledDescriptor(root, { version: pkg.version })
     const report = {
       contract: `@we-the-rebel-alliance/source-contract@${CONTRACT_VERSION}`,

@@ -60,7 +60,7 @@ the checks and the release steps.
   Every call resolves the rule before dispatch: only an `allow` runs, so `get_participant_contacts` needs one. Keep the
   RPC id `wisprflow.meetings.tools` and its method names stable: scripts call them by name. `docs/scripting.md` is the
   contract, and `test/unit/scripting-docs.test.ts` parses every example in it and in the README.
-- **Sources.** `package.json`'s `sources` declares one source under source-contract version 1, `wisprflow.meetings`:
+- **Sources.** `package.json`'s `sources` declares `wisprflow.meetings` and the list snapshot `wisprflow.meetings.list` under source-contract version 1. `wisprflow.meetings`:
   `events_list` (`wisprflow_events_list`, a tool and a tools RPC method) lists the meetings Wispr Flow captured, and
   `probe` (`wisprflow_probe`, a tools RPC method only) names who is signed in. `src/events.ts` implements both with the
   package's `events` and `cursor` modules. Wispr Flow has no tool that names the account, so the owner, in every page

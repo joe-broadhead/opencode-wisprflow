@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.8] - 2026-11-23
+
+### Changed
+
+- The README and the configuration and Jelly guides now state what the source returns for the owner, in its pages and
+  in `probe`: OpenCode's sign-in for the `wisprflow` server, because Wispr Flow has no tool that names the account. The
+  returned owner carries no `verified: false` field today, so a consumer reading only the page must not treat it as a
+  verified provider identity. The README's known-limits section now states the conformance report's actual
+  not-applicable counts (13 checks for `wisprflow.meetings`, 18 for `wisprflow.meetings.list`), and the conformance test
+  comment is corrected to the same counts. Documentation and test comment only; no runtime, descriptor or permission
+  behaviour changes.
+
 ## [0.0.7] - 2026-11-20
 
 ### Added
@@ -23,7 +35,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - A listing still reads every sign-in as the free plan, because no Wispr Flow tool names the plan: a read that starts
   more than 29 days ago answers `gap: { reason: "expired" }` once and lists from 29 days ago, so a meeting the plan has
   locked is never skipped silently.
-
 
 ## [0.0.6] - 2026-11-18
 

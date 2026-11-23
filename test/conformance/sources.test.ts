@@ -161,8 +161,8 @@ describe("the source contract's conformance kit", () => {
     })
     reports.push(report)
     expect(report.problems).toEqual([])
-    // Every check that applies ran: the report is complete. The expired-cursor and gap checks ran on the stale cursor;
-    // only failed[] is declared not applicable (atomicPages), with its reason shown.
+    // Every check that applies ran: the report is complete. The report marks the checks that do not apply
+    // (13 for the events source, 18 for the list); only failed[] carries a reason (atomicPages).
     expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual([])
     expect(report.checks.filter((check) => check.ran).map((check) => check.name)).toEqual(expect.arrayContaining(["gap-and-cursor-expired", "gap-once-per-read", "refused-is-final", "probe"]))
     expect(report.checks.filter((check) => check.reason !== undefined).map((check) => check.name)).toEqual(["failed-holds-cursor"])

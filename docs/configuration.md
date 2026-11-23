@@ -361,7 +361,9 @@ since }`, `since` being the minute's start, lists what follows and moves past it
 Wispr Flow has no tool that names the signed-in account, so the owner, on every page and in `probe` alike, is
 OpenCode's sign-in for the `wisprflow` server, unverified (OpenCode's sign-in, not a Wispr Flow identity): its id is
 always `wisprflow:credential:` and the credential's id, which a new sign-in changes, and its label, for display only,
-the credential's label. Renaming the label changes neither the owner nor a cursor. `probe` asserts `wisprflow_probe` and reads only that sign-in: it calls
+the credential's label. The owner today carries no `verified: false` field, so a consumer reading only the page cannot
+see that it is unverified and must not treat the owner as a verified provider identity. Renaming the label changes
+neither the owner nor a cursor. `probe` asserts `wisprflow_probe` and reads only that sign-in: it calls
 Wispr Flow for nothing. The cursor is bound to the plugin, the source and the account, and holds a digest of the
 owner: a cursor from another sign-in is refused with `ACCOUNT_MISMATCH` before any read (call `probe`, then start
 again with `since`), and one this source did not issue, an earlier version's included, with `CURSOR_INVALID`.

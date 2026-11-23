@@ -67,7 +67,9 @@ None: `jelly.views` and `jelly.rpc` are empty, and the plugin adds no Home feed.
 
 Signing in again from the card starts Memory's Wispr Flow source over. Wispr Flow has no tool that names the signed-in
 account, so `events_list` and `probe` name the owner from OpenCode's sign-in, unverified: its id is the credential's
-own id, which a new sign-in changes, and its label is for display only. The cursor holds a digest of the owner, so after
+own id, which a new sign-in changes, and its label is for display only. The owner today carries no `verified: false`
+field, so a consumer reading only the page cannot see that it is unverified and must not treat the owner as a verified
+provider identity. The cursor holds a digest of the owner, so after
 a new sign-in an old cursor is refused (`ACCOUNT_MISMATCH`), and the collector calls `probe` and starts again from a
 `since`.
 

@@ -1,23 +1,22 @@
 # Repository rules
 
-This repository builds `@joe-broadhead/opencode-wisprflow`, an OpenCode plugin that registers Wispr Flow's official
-MCP server and adds default permission rules, a status command, a status dialog, two skills and a tools RPC for
-scripts. It adds no tool of its own.
-Read [docs/architecture.md](docs/architecture.md) before you change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for
-the checks and the release steps.
+This repository builds `@we-the-rebel-alliance/wisprflow-plugin`, an OpenCode plugin that registers Wispr Flow's
+official MCP server and adds default permission rules, a status command and view, two skills, a tools RPC for scripts,
+and the `events_list` model tool (Code Mode `tools.wisprflow.events_list`). Read
+[docs/architecture.md](docs/architecture.md) before changing code and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks.
+
+`v0.0.0` starts the repository's new org and history. It is being rebuilt on plugin-contract v0
+([tracking issue](https://github.com/we-the-rebel-alliance/wisprflow-plugin/issues/25)); the contract work comes next.
+Keep this repository greenfield: delete rather than deprecate, and add no compatibility path or app-specific doc.
 
 ## Rules
 
-- **Public API only.** Use only the public `@opencode/plugin` 2.2.3 API. `opencode.host` in `package.json` and
-  `SUPPORTED_HOST` in `src/constants.ts` both say exactly `>=2.2.3 <2.4.0`, never `^2.2.3`. `TESTED_HOSTS` in
-  `src/constants.ts` is the one list of tested releases (2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2): status calls only those tested,
-  the host and pack stages and CI run on each, and `test/unit/docs.test.ts` fails when any doc's "tested on …" sentence
-  names a different set. Inside the range an untested release still starts; the untested example in tests is 2.2.99.
-- **Greenfield.** No legacy, migration code, compatibility shim, dual path or deprecated alias, and nothing dead.
-  Delete rather than deprecate.
+- **Public API only.** Use only the public `@opencode/plugin` 2.4.1 API. `opencode.host` in `package.json` and
+  `SUPPORTED_HOST` in `src/constants.ts` both say exactly `>=2.4.1 <2.5.0`. `TESTED_HOSTS` is `["2.4.1"]`: status
+  calls only that release tested, and the host, pack and CI checks run on it. Inside the range an untested release
+  starts; the untested example in tests is `2.4.99` and the outside example is `2.5.0`.
 - **No peers, no runtime dependencies, no lifecycle scripts.** `@opencode/plugin`, `@opencode/sdk` and
-  `@opencode/client` (whose types the host tests use) are devDependencies pinned to exactly `2.2.3`. Do not add another
-  host version to the lockfile: the host stage installs the other tested SDKs into a temp folder.
+  `@opencode/client` are devDependencies pinned to exactly `2.4.1`. The bundle is self-contained.
 - **Ship prebuilt, one file per entry.** `scripts/build.mjs` bundles `src/index.ts` and `src/tui.ts` with esbuild into
   the self-contained `dist/index.js` and `dist/tui.js`: no chunks, no relative imports, and only host-provided modules
   external. `tsc` only typechecks. No declaration files, `.tsx` or JSX.
@@ -25,98 +24,27 @@ the checks and the release steps.
   nowhere else in `src`: a trailing slash stops Wispr Flow's sign-in, the URL is part of the credential's key, and the
   pack test swaps its one occurrence in the bundle for a fake's. The server config sets no `oauth` block.
 - **Default rules, not hooks.** Permissions come from rules inserted through `ctx.agent.transform` directly after each
-  agent's base allow. A stricter agent is never weakened. An agent counts as guarded only with the whole block after
-  its base allow. Agents that miss the rules are named in status with the per-agent fix, never patched, and the fix
-  never goes in the top-level `permissions`.
+  agent's base allow. A stricter agent is never weakened. Agents that miss the rules are named in status with the
+  per-agent fix, never patched, and the fix never goes in the top-level `permissions`. No per-request hooks and no
+  pinned tools.
 - **Transforms are cheap, synchronous and never throw.** Record failures for status instead.
-- **Errors** read `CODE: What happened. Next step: What to do.`, built by `wisprflowError` or `errorText`. Codes have
-  no service prefix; shared failures use the shared names (`HOST_UNTESTED`, `OPTIONS_INVALID`, `STATUS_UNAVAILABLE`,
-  `SKILLS_INVALID`).
-- **Status.** `src/status.ts` builds one model for `/wisprflow-status`, the `/wisprflow` dialog and the status RPC,
-  from OpenCode's own state: it never calls Wispr Flow. The RPC keeps the fields every plugin of this family shares,
-  `version`, `host` (`version`, `range`, `tested`), `state`, `unguardedAgents` and `nextStep`, under those names. It
-  never shows OpenCode's text for a needed sign-in, cuts a failure's reason to one line of 160 characters without URL
-  queries, and names at most 20 unknown tools, plain names only. A status it cannot read is the declared RPC error
-  `unavailable`, with a next step.
-- **`src/wisprflow-tools.ts` is the one place that classifies Wispr Flow's tools,** and it and `src/constants.ts` have
-  no runtime imports: the drift script and `scripts/check.mjs` load them with Node's type stripping. The default
-  rules, the tools RPC's methods, status and the tests derive from it. `READ_TOOLS` and `PERSONAL_TOOLS` run without a prompt (`PERSONAL_TOOLS` return other people's personal data, so a user's rule may restrict them); every list is a tools RPC method, with
-  its class. Together they are exactly the tools in `test/unit/wisprflow-catalog.ts`.
-- **The `jelly` section** of `package.json` declares every known tool, the skills, the sign-in, a one-line `summary`
-  and the `icon`. Jelly's declaration schema drops a top-level key it does not know, and its nested entries accept only
-  their own fields, so use only the fields it reads. `test/unit/jelly.test.ts` keeps it in step with the known tools
-  and the default rules.
-- **The icons** `assets/icon.svg`, `assets/icon-128.png` and `assets/icon-256.png` are Wispr Flow's own mark: the five-bar
-  symbol from Wispr Flow's logo, as the dark symbol of its logo kit has it; don't redraw or recolour it. The README
-  carries the trademark line and `opencode.vendor.mark` is `true`. They are checked by `scripts/check-icons.mjs`, which is a byte-identical copy of the
-  kit's: only `opencode.icons`, the three `exports` and the three `files` entries describe them. The article's
-  `opencode.vendor` declares Wispr Flow as the vendor.
-- **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
-- **The tools RPC.** The transport is the source contract's `tools-rpc` module (`@we-the-rebel-alliance/source-contract`,
-  a devDependency pinned to a tag and bundled into `dist/index.js`); `src/tools-rpc.ts` is Wispr Flow's part of it, one
-  `ToolsRpcPlugin` value and the method table. Its methods are every name in `READ_TOOLS`, `PERSONAL_TOOLS` and
-  `WRITE_TOOLS`, each with its class, and the plugin's own `events_list` and `probe`; a tool Wispr Flow adds later is
-  never a method.
-  Every call resolves the rule before dispatch: only an `allow` runs, so `get_participant_contacts` needs one. Keep the
-  RPC id `wisprflow.meetings.tools` and its method names stable: scripts call them by name. `docs/scripting.md` is the
-  contract, and `test/unit/scripting-docs.test.ts` parses every example in it and in the README.
-- **Sources.** `package.json`'s `sources` declares `wisprflow.meetings` and the list snapshot `wisprflow.meetings.list` under source-contract version 1. `wisprflow.meetings`:
-  `events_list` (`wisprflow_events_list`, a tool and a tools RPC method) lists the meetings Wispr Flow captured, and
-  `probe` (`wisprflow_probe`, a tools RPC method only) names who is signed in. `src/events.ts` implements both with the
-  package's `events` and `cursor` modules. Wispr Flow has no tool that names the account, so the owner, in every page
-  and in `probe`, is OpenCode's sign-in for the server; `probe` calls Wispr Flow for nothing. The declared operations
-  are exactly the Wispr Flow tools the reads call (`search_meetings`). The list snapshot's `list` input is on the tools
-  RPC method only: the model tool has no `list`. It reads the last 29 days, sorts newest first, and returns at most 50
-  titles, each screened whole and cut to 200 characters. `test/conformance/` runs the package's
-  conformance kit over the declaration (the `conformance` stage, and `npm run conformance`, which a release runs) and
-  writes `reports/conformance-report.json`, which must say `ok: true`. Only `atomicPages` is declared, with its
-  reason; every other check that applies must run. Never declare `noExpiry`: the free plan locks meetings older than
-  30 days, so a read that starts more than 29 days ago (`VISIBLE_MS` less `MARGIN_MS`) answers a `gap` (`expired`)
-  once and restarts at that line, which its cursor carries (`g`) so the read's later pages never gap again.
+- **Errors** read `CODE: What happened. Next step: What to do.`, built by `wisprflowError` or `errorText`. Codes have no
+  service prefix; shared failures use the shared names.
+- **Status.** `src/status.ts` builds one model for `/wisprflow-status`, the `/wisprflow` dialog and the status RPC from
+  OpenCode's own state: it never calls Wispr Flow. It cuts a failure's reason to one line of 160 characters without URL
+  queries, and names at most 20 unknown tools, plain names only.
+- **`src/wisprflow-tools.ts` is the one place that classifies Wispr Flow's tools.** It and `src/constants.ts` have no
+  runtime imports: `scripts/check.mjs` loads them with Node's type stripping. The default rules, the tools RPC's
+  methods, status and the tests derive from it.
+- **Fixed context.** The Code Mode namespace line is at most 400 characters and each skill description at most 300.
+  `test/unit/docs.test.ts` enforces both. Nothing outside the plugin names its tools.
+- **`jelly` and `sources` stay for now.** `package.json`'s `jelly` and `sources` keys are read by the current apps and
+  are replaced by the contract manifest; do not grow them. The source's owner is OpenCode's sign-in, marked
+  `verified: false`, because Wispr Flow names no account.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
-  `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`. On
-  2.3.1 and later the harness builds that host through `PromiseSdk.create`, which `OpenCode.create` calls, with the
-  SDK's `overrides` so that its Automation service also runs the scheduler, as `opencode serve` does: Code Mode with
-  nobody present runs there as an automation's code action (`unattended` in `test/host/harness.ts`).
-  Every temp root of the host and pack tests is a git repository under the system's `/tmp`, never under `TMPDIR` or
-  `HOME`, so OpenCode never finds a `.opencode` folder of whoever runs them; each stock server has its own port.
-  Never sign in to Wispr Flow or call its server from a check.
-- **Text.** Model-facing text and docs use plain language and describe what the code does now: no process
-  narrative, test counts, machine-local paths, secrets or personal data. Fixtures use made-up names only, never
-  meeting, note or calendar content.
-- **Releases** come only from `.github/workflows/release.yml` ("Releasing" in [CONTRIBUTING.md](CONTRIBUTING.md)). A
-  release-prep PR sets `version` in `package.json` and the install specs and runs `node scripts/changelog.mjs release`;
-  once it is on `master` and CI passed, start the release with
-  `gh workflow run release.yml --ref master -f sha=<its full sha>`. The workflow builds `dist/`, makes the release
-  commit on a temporary `release/v<version>` branch, checks and stages everything, and waits for the owner to approve
-  the `release` environment; only then does it create the tag `v<version>` and the GitHub Release. Never push a tag or a
-  `release/*` branch, and never commit, tag or publish a release by hand. Agents never approve a release, never call the
-  deployment-approval API, and never bypass a ruleset or the environment.
-- **No personal email in anything we publish.** Every commit is authored and committed as
-  `joe-broadhead <91376460+joe-broadhead@users.noreply.github.com>`, except the release commit and tag, which the
-  release workflow makes as `github-actions[bot]`. Before committing or tagging, check that
-  `git config user.email` is that address: a fresh clone inherits the machine's global identity, which is not that
-  address. Never commit, tag or publish with a work or personal address, or with a local hostname.
-- **One check command.** `npm run check` passes before every commit. Never skip, weaken or delete a test to get
-  green.
-
-## Forbidden in this repository
-
-`scripts/check-forbidden.mjs` enforces this list in `src/`, `test/`, `scripts/` and `dist/`:
-
-- dispatch-lease, catalog-ownership and text-only markers, and tool `options.mcp` delegation;
-- `Plugin.image` and profile images;
-- imported OAuth grants;
-- the V1 plugin API: `@opencode-ai/*` packages and hooks such as `tool.execute.before`, `chat.message` or
-  `permission.ask`;
-- the deprecated `ctx.generate.text` and `experimental.policies`;
-- importing `@opencode/ai`;
-- a permission hook, except the one `permission.hook("evaluate")` of the source contract's tools RPC, in the bundle
-  that inlines it, exactly once: it turns an `ask` on one of the tools RPC's own script calls in flight into a deny,
-  because no one can answer it, and touches nothing else;
-- references to private host source or host checkouts;
-- machine-local home and temp paths;
-- `.tsx` or `.jsx` files in `dist/`.
-
-The pack test also rejects anything in `dist/` other than the two bundles, any relative, dynamic or `require` import in
-them, and any import of a module OpenCode does not provide.
+  `PromiseSdk.create` and the temp root from `test/host/isolate.ts`. The embedded host does not start the automation
+  scheduler, so the harness forks `Automation.run` itself; Code Mode with nobody present runs as an automation's code
+  action. Never sign in to Wispr Flow or call its server from a check.
+- **Text.** Model-facing text and docs describe what the code does now: no process narrative, test counts,
+  machine-local paths, secrets or personal data. Fixtures use made-up names only.
+- **One check command.** `npm run check` passes before every commit. Never skip, weaken or delete a test to get green.

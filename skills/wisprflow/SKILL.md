@@ -1,9 +1,9 @@
 ---
 name: wisprflow
-description: Load before the first Wispr Flow tool call (wisprflow_*, tools.wisprflow.*). Use when the user names Wispr Flow, Flow or its Notetaker or Scratchpad, or gives a notes.wisprflow.ai link - their recorded meetings (what was said, decided or assigned, transcripts, Flow Summaries, attendees, folders), Scratchpad notes, the calendar Wispr Flow holds, or Wispr Flow sign-in. Also when the user asks Wispr Flow for dictation history, the dictionary, snippets or usage, or to transcribe an audio file, which this connection can't do. Not for Granola or Plaud, or for transcribing audio without Wispr Flow named.
+description: The user's Wispr Flow meetings (what was said, decided or assigned, transcripts, summaries), Scratchpad notes, the calendar it holds, and sign-in, when Wispr Flow is named. It can't read dictation history or transcribe audio. Not for Granola or Plaud.
 ---
 
-If Wispr Flow's tools are absent, run `/connect` and choose Wispr Flow, or on Jelly call jelly_connection_request.
+If Wispr Flow's tools are absent, run `/connect` and choose Wispr Flow.
 
 # Wispr Flow
 
@@ -83,4 +83,4 @@ Only the user signs in: run `/connect` and choose Wispr Flow, then press `o` or 
 
 ## Scripts
 
-A cron job or shell script can run the same reads with no model through the tools RPC `wisprflow.meetings.tools`. It runs as a session's agent, under its rules, so a script, or a test of one, uses a session created for it (`opencode api post /api/session -d '{"title":"…","agent":"build"}'`, keep `data.id`). Never borrow an existing session found through history or a list. Details: https://raw.githubusercontent.com/joe-broadhead/opencode-wisprflow/HEAD/docs/scripting.md
+A cron job or shell script can run the same reads with no model through the tools RPC `wisprflow.meetings.tools`. It runs as a session's agent, under its rules, so a script, or a test of one, uses a session created for it (`opencode api post /api/session -d '{"title":"…","agent":"build"}'`, keep `data.id`). Never borrow an existing session found through history or a list. Details: https://raw.githubusercontent.com/we-the-rebel-alliance/wisprflow-plugin/master/docs/scripting.md

@@ -3,7 +3,7 @@
 // `jelly.tools` must match them (test/unit/jelly.test.ts). Keep this file free of runtime imports:
 // scripts/check-wisprflow-tools.mjs loads it with Node's type stripping to report upstream drift.
 //
-// The tools OpenCode 2.2.3 lists for Wispr Flow's server, 2026-11-05, and one it lists only for some accounts: every
+// The tools OpenCode lists for Wispr Flow's server (captured 2026-11-05), and one it lists only for some accounts: every
 // one reads, and none changes Wispr Flow.
 
 /** Known reads. They run without a prompt, and they are the tools RPC's methods. */
@@ -35,7 +35,7 @@ export const READ_TOOLS: readonly string[] = [
 export const PERSONAL_TOOLS: readonly string[] = ["get_participant_contacts"]
 
 /**
- * The plugin's own reads in the wisprflow namespace: events_list, Memory's source of meetings, which reads through
+ * The plugin's own reads in the wisprflow namespace: events_list, a collector's source of meetings, which reads through
  * search_meetings. Allowed like the known reads, and a tools RPC method of its own; never one of Wispr Flow's tools.
  */
 export const PLUGIN_READS: readonly string[] = ["events_list"]

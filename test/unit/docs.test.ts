@@ -1,22 +1,20 @@
 // The docs and skills state the tool counts and list the tools RPC's methods. They must match src/wisprflow-tools.ts,
-// so a change to the tool lists cannot leave a stale count or method behind.
+// so a change to the tool lists cannot leave a stale count or method behind, and every repository link must point at
+// this repository's new name and the master branch.
 import { describe, expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { PERSONAL_TOOLS, PLUGIN_METHODS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
-import { TESTED_HOSTS } from "../../src/constants.js"
+import { NAMESPACE_DESCRIPTION, TESTED_HOSTS } from "../../src/constants.js"
 import { defaultRules } from "../../src/permissions.js"
 import { LIVE } from "./wisprflow-catalog.js"
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url))
 const DOCS = readdirSync(join(ROOT, "docs")).map((name) => `docs/${name}`)
 // Everything a user or the model reads about the current release.
-const FILES = ["README.md", "SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md", ...DOCS, ...readdirSync(join(ROOT, "skills")).map((name) => `skills/${name}/SKILL.md`)]
-const { version } = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { version: string }
-const SPEC = `opencode-wisprflow#v${version}`
-// The upgrade example removes the previous release's entry, so it names that one older tag.
-const UPGRADE = /remove the old entry with `opencode plugin remove github:joe-broadhead\/opencode-wisprflow#v(\d+)\.(\d+)\.(\d+)`/
+const FILES = ["README.md", "SECURITY.md", "CONTRIBUTING.md", "AGENTS.md", "CHANGELOG.md", ...DOCS, ...readdirSync(join(ROOT, "skills")).map((name) => `skills/${name}/SKILL.md`)]
+const SPEC = "we-the-rebel-alliance/wisprflow-plugin#v<version>"
 const text = (file: string) => readFileSync(join(ROOT, file), "utf8").replace(/\s+/g, " ")
 
 describe("docs", () => {
@@ -32,19 +30,37 @@ describe("docs", () => {
     expect(named.filter((tool) => ![...READ_TOOLS, ...PLUGIN_READS, ...PLUGIN_METHODS, ...PERSONAL_TOOLS, ...WRITE_TOOLS].includes(tool))).toEqual([])
   })
 
-  // S5: version numbers live in package.json and the CHANGELOG heading only, and nothing says the package is unreleased.
-  test.each(["README.md", "CONTRIBUTING.md", ...DOCS])("%s names no version of the plugin and no pre-release state", (file) => {
-    // D19: the README's install line names the release tag, its upgrade example the previous one, and CONTRIBUTING's
-    // Releasing section names v0.0.0. Nothing else may.
-    const body = file === "CONTRIBUTING.md" ? text(file).replace(/#{2,3} Releasing.*?(?= #{2,3} |$)/, "") : text(file).replace(UPGRADE, "").replaceAll(SPEC, "")
-    expect(body).not.toMatch(/opencode-wisprflow@\d|\bv?\d+\.\d+\.\d+-|\bv?0\.0\.\d\b|not (yet )?published|provisional|"private"/i)
+  // Version numbers live in package.json and the CHANGELOG heading only; every install line names this release.
+  test.each(FILES)("%s names no plugin version but 0.0.0, and no pre-release state", (file) => {
+    const body = file === "CHANGELOG.md" ? "" : text(file)
+    const versions = [...body.matchAll(/wisprflow-plugin#v(\d+\.\d+\.\d+)/g)].map((match) => match[1])
+    expect(versions.filter((entry) => entry !== "0.0.0")).toEqual([])
+    expect(body).not.toMatch(/opencode-wisprflow|\bnot (?:yet )?published\b|provisional/i)
   })
 
-  test("the README's upgrade example removes an older release than this one", () => {
-    const older = UPGRADE.exec(text("README.md"))?.slice(1).map(Number) ?? []
-    const current = version.split(".").map(Number)
-    expect(older).toHaveLength(3)
-    expect(older[0]! * 1e6 + older[1]! * 1e3 + older[2]!).toBeLessThan(current[0]! * 1e6 + current[1]! * 1e3 + current[2]!)
+  test.each(FILES)("%s links only to this repository, on master", (file) => {
+    const body = readFileSync(join(ROOT, file), "utf8")
+    expect(body).not.toMatch(/joe-broadhead|opencode-wisprflow|\/blob\/HEAD\//)
+    for (const link of body.match(/https:\/\/github\.com\/[^\s)>]+/g) ?? []) {
+      // Third-party links, such as OpenCode's own source, are not repository links of this plugin.
+      if (!link.includes("we-the-rebel-alliance/wisprflow-plugin")) continue
+      expect(link).toMatch(/^https:\/\/github\.com\/we-the-rebel-alliance\/wisprflow-plugin(?:\/blob\/master\/|\/issues\/|\/security\/|$)/)
+    }
+    for (const link of body.match(/https:\/\/raw\.githubusercontent\.com\/[^\s)>]+/g) ?? []) {
+      expect(link).toStartWith("https://raw.githubusercontent.com/we-the-rebel-alliance/wisprflow-plugin/master/")
+    }
+  })
+
+  test("the install line names this repository, a release tag and the first release", () => {
+    const readme = text("README.md")
+    expect(readme).toContain(`opencode plugin add github:${SPEC}`)
+    expect(readme).toContain("Install from a release: `opencode plugin add github:we-the-rebel-alliance/wisprflow-plugin#v<version>`. The first release on plugin-contract is v0.0.0 (phase 4b).")
+  })
+
+  test.each(FILES)("%s installs only from a release tag", (file) => {
+    for (const match of text(file).matchAll(/opencode plugin add (github:we-the-rebel-alliance\/wisprflow-plugin[^\s`"]*)/g)) {
+      expect({ file, spec: match[1] }).toEqual({ file, spec: expect.stringContaining("#v") })
+    }
   })
 
   // Once the plugin is removed and OpenCode reloads, `mcp logout wisprflow` finds no server: the README signs out first,
@@ -53,7 +69,7 @@ describe("docs", () => {
     const uninstall = /## Uninstall(.*?)## Links/.exec(text("README.md"))?.[1] ?? ""
     const logout = uninstall.indexOf("opencode mcp logout wisprflow")
     const check = uninstall.indexOf("opencode auth list")
-    const remove = uninstall.indexOf(`opencode plugin remove github:joe-broadhead/${SPEC}`)
+    const remove = uninstall.indexOf(`opencode plugin remove github:${SPEC}`)
     expect(logout).toBeGreaterThanOrEqual(0)
     expect(check).toBeGreaterThan(logout)
     expect(remove).toBeGreaterThan(check)
@@ -83,17 +99,6 @@ describe("docs", () => {
 
   test("the README explains the Skills row that names a replacing skill, and its fix", () => {
     expect(text("README.md")).toMatch(/Skills.*is replaced by.*Rename or move/)
-  })
-
-  test("the Jelly guide states the declared tool counts, and says Jelly drops unknown keys rather than refusing them", () => {
-    const tools = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).jelly.tools as { readOnly: boolean }[]
-    expect(text("docs/jelly.md")).toContain(`${tools.length} tools are declared (${tools.filter((tool) => tool.readOnly).length} read-only)`)
-    // Jelly's shared block is jelly's own text, word for word (the kit's drift check holds it byte for byte); it says
-    // what jelly refuses inside a declaration, so its lines are not this guide's claims.
-    const guide = text("docs/jelly.md").replace(/<!-- family-block:start -->.*?<!-- family-block:end -->/, "")
-    expect(guide).not.toContain("family-block")
-    expect(guide).not.toMatch(/`latest` is|None yet|refuses/)
-    expect(text("docs/jelly.md")).toContain("the one line in `jelly.summary`, and beside it the mark in `jelly.icon`")
   })
 
   // An admin copies these blocks into managed config: each must be the plugin's real block for that access value.
@@ -128,6 +133,30 @@ describe("docs", () => {
   })
 })
 
+// The fixed-context budget: the namespace line and every skill description are sent on every turn.
+describe("fixed context", () => {
+  test("the namespace line is at most 400 characters", () => {
+    expect(NAMESPACE_DESCRIPTION.length).toBeLessThanOrEqual(400)
+  })
+
+  test("every skill description is at most 300 characters", () => {
+    for (const name of readdirSync(join(ROOT, "skills"))) {
+      const body = readFileSync(join(ROOT, "skills", name, "SKILL.md"), "utf8")
+      const description = /^description: (.*)$/m.exec(body)?.[1] ?? ""
+      expect({ name, length: description.length, within: description.length <= 300 }).toEqual({ name, length: description.length, within: true })
+    }
+  })
+
+  test("no tool is pinned and no per-request hook is added", () => {
+    const sources = readdirSync(join(ROOT, "src")).filter((name) => name.endsWith(".ts"))
+    for (const name of sources) {
+      const body = readFileSync(join(ROOT, "src", name), "utf8")
+      expect({ name, pinned: /\bpinned\s*:/.test(body) }).toEqual({ name, pinned: false })
+      expect({ name, hook: /\b(?:session|permission)\.hook\s*\(/.test(body) }).toEqual({ name, hook: false })
+    }
+  })
+})
+
 // The README prints the block the plugin inserts, in full, generated from defaultRules(): it is what an administrator
 // copies into an agent's own permissions, so it cannot be elided or drift.
 describe("the default rules block", () => {
@@ -140,8 +169,8 @@ describe("the default rules block", () => {
 
 // Every "tested on …" mention states TESTED_HOSTS, so a release added to the list cannot leave a stale sentence behind.
 describe("tested hosts", () => {
-  // The upcoming release: the first versioned section, up to the next "## " heading (the npm history follows it).
-  const RELEASE = /## \[[^\]]+\]([\s\S]*?)(?=\n## |$)/.exec(readFileSync(join(ROOT, "CHANGELOG.md"), "utf8"))?.[1] ?? ""
+  // The upcoming release: the one section, up to the next "## " heading.
+  const RELEASE = /## 0\.0\.0 \(unreleased\)([\s\S]*?)(?=\n## |$)/.exec(readFileSync(join(ROOT, "CHANGELOG.md"), "utf8"))?.[1] ?? ""
   const SOURCES: [string, string][] = [
     ["README.md", readFileSync(join(ROOT, "README.md"), "utf8")],
     ["AGENTS.md", readFileSync(join(ROOT, "AGENTS.md"), "utf8")],
@@ -160,20 +189,20 @@ describe("tested hosts", () => {
       .map((sentence) => sentence.replace(/`[^`]*>=[^`]*`/g, ""))
       .map((sentence) => [...sentence.matchAll(/\b\d+\.\d+\.\d+\b/g)].map((version) => version[0]!))
       .filter((versions) => versions.length > 0)
-    expect({ file, versions: mentions.every((versions) => versions.length > 0) }).toEqual({ file, versions: true })
     for (const versions of mentions) expect({ file, versions: [...new Set(versions)].sort() }).toEqual({ file, versions: [...TESTED_HOSTS].sort() })
   })
 
   test("the README's Requirements line names every tested release", () => {
     const requirements = /## Requirements([\s\S]*?)## /i.exec(readFileSync(join(ROOT, "README.md"), "utf8"))?.[1] ?? ""
-    const named = [...requirements.matchAll(/\b\d+\.\d+\.\d+\b/g)].map((match) => match[0]).filter((version) => version !== "2.4.0")
+    const named = [...requirements.matchAll(/\b\d+\.\d+\.\d+\b/g)].map((match) => match[0]).filter((version) => version !== "2.5.0")
     expect([...new Set(named)].sort()).toEqual([...TESTED_HOSTS].sort())
   })
 
   // A release inside the range that ships later is the untested example, so it must be one that never ships.
-  test("the untested example is 2.2.99, and no doc names a future release as tested", () => {
+  test("the untested example is 2.4.99, and no doc names a future release as tested", () => {
     const all = SOURCES.map(([, text]) => text).join("\n")
-    expect(all).toContain("2.2.99")
-    expect(all).not.toMatch(/\b(?:2\.2\.(?:8|9[0-8])|2\.3\.(?:[3-9]|[1-9]\d+))\b(?!\d)/)
+    expect(all).toContain("2.4.99")
+    expect(all).not.toMatch(/\b2\.4\.(?:[2-9]|[1-8]\d|9[0-8])\b(?!\d)/)
+    expect(all).not.toMatch(/\b2\.5\.[1-9]\d*\b/)
   })
 })

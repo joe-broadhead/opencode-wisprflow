@@ -1,5 +1,5 @@
 // Narrow fakes of the public plugin context: only the members a test touches, typed with Pick<> so they
-// stay valid against later 2.2 and 2.3 context shapes.
+// stay valid against the 2.4.1 context shape.
 import type { Plugin } from "@opencode/plugin"
 import type { Rule } from "../../src/permissions.js"
 
@@ -36,7 +36,7 @@ export function mcpEditor(initial: Record<string, ServerConfig> = {}) {
 
 export type FakeAgent = { id: string; permissions: Rule[] }
 
-/** Agents shaped like 2.2.3's built-ins: a base allow first, then each agent's own rules. */
+/** Agents shaped like OpenCode's built-ins: a base allow first, then each agent's own rules. */
 export const builtInAgents = (): FakeAgent[] => [
   { id: "build", permissions: [allow("*"), { action: "read", resource: "*.env", effect: "ask" }] },
   { id: "plan", permissions: [allow("*"), { action: "read", resource: "*.env", effect: "ask" }, { action: "edit", resource: "*", effect: "deny" }] },

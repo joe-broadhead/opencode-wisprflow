@@ -1,7 +1,7 @@
 # Scripting
 
-A script can call every tool this plugin knows with no model: a cron job, a shell script, or any program that can reach
-the OpenCode server. It uses the tools RPC, `wisprflow.meetings.tools`, through `opencode api` or an OpenCode client.
+A script can call every tool this plugin knows with no model: an OpenCode automation, a shell script, or any program
+that can reach the OpenCode server. It uses the tools RPC, `wisprflow.meetings.tools`, through `opencode api` or an OpenCode client.
 
 | Class | Methods |
 | --- | --- |
@@ -49,8 +49,7 @@ The script then runs as that agent, with exactly the access its model would have
 
 **A saved "Always allow" approval does not authorize an ad-hoc script.** It lives outside the agent's and the
 session's rules, so the resolve refuses an `ask` even after a past approval. That is deliberate: a script's permission
-must be reviewable in config. A script's grant is a rule in the agent's or the session's config, or a Jobs run session.
-For a one-off that needs an approval-bound grant, use Jobs's `jobs_run_script`.
+must be reviewable in config. A script's grant is a rule in the agent's or the session's config.
 
 Session rules come after the agent's, so a session can narrow what its script may do. This one can search and read
 meetings, and nothing else in Wispr Flow:
@@ -100,7 +99,8 @@ there. The HTTP equivalents are the `location[directory]` query parameter and th
 `location` that answered and a `locationHint`.
 
 A location unloads after OpenCode's idle timeout. If a scheduled script gets `rpc.unavailable` from a location that was
-loaded before, send the call again once: the request loads the location. Jobs keeps its own location loaded.
+loaded before, send the call again once: the request loads the location. An OpenCode automation runs in a session, whose
+location stays loaded for the run.
 
 ## Results
 

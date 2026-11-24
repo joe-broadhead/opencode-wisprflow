@@ -73,8 +73,6 @@ interface Setup {
   /** Test-only: false disables the MCP-only next-step shim below, to prove registration still requires them. */
   shim?: boolean
   lookup?: (sessionID: string) => Promise<unknown>
-  /** A host that reports a missing agent as a plain Error, as stock 2.2.3 to 2.3.2 do. */
-  plainAgentError?: boolean
   unavailableDetail?: NonNullable<ToolsRpcOptions["mcp"]>["unavailableDetail"]
   notRegistered?: NonNullable<ToolsRpcOptions["mcp"]>["notRegistered"]
 }
@@ -171,7 +169,7 @@ async function setup(options: Setup = {}): Promise<Harness> {
       // The module looks the agent up in its own location, without passing one: the session was read there.
       get: async ({ agentID }: { agentID: string }) => {
         const permissions = agents[agentID]
-        if (!permissions) throw options.plainAgentError ? new Error(`Agent not found: ${agentID}`) : Object.assign(new Error(`Agent not found: ${agentID}`), { _tag: "Agent.NotFoundError" })
+        if (!permissions) throw Object.assign(new Error(`Agent not found: ${agentID}`), { _tag: "Agent.NotFoundError" })
         return { location: { directory: LOCATION }, data: { id: agentID, permissions } }
       },
     },
@@ -545,13 +543,6 @@ describe("sessions", () => {
     const h = await setup({ sessions: { ses_none: {}, ses_gone: { agent: "gone" } } })
     refusedWith(await call(h, READ, {}, "ses_none"), "SESSION_AGENT_REQUIRED")
     refusedWith(await call(h, READ, {}, "ses_gone"), "SESSION_AGENT_REQUIRED")
-    expect(h.calls).toEqual([])
-  })
-
-  test("a host that reports a missing agent as a plain 'Agent not found' error gets SESSION_AGENT_REQUIRED, not rpc.internal", async () => {
-    const h = await setup({ sessions: { ses_gone: { agent: "gone" } }, plainAgentError: true })
-    refusedWith(await call(h, READ, {}, "ses_gone"), "SESSION_AGENT_REQUIRED")
-    expect(NEXT_STEPS.SESSION_AGENT_REQUIRED).toContain('"location"')
     expect(h.calls).toEqual([])
   })
 })

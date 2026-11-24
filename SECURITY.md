@@ -31,8 +31,9 @@ OpenCode project.
 - `wisprflow_events_list` reads the meetings Wispr Flow captured through OpenCode's own `search_meetings`, and returns
   each one's title, start, up to 5 attendees' names and emails and its `share_link`, with OpenCode's sign-in as the
   owner (its credential's id, labelled with its label). It refuses a meeting whose title or summary holds a secret.
-  The tools RPC method `probe` returns only that owner, and calls Wispr Flow for nothing. Memory's collector calls them to copy these events to your private memory
-  space, after you turn Wispr Flow on as a source; the plugin itself sends them nowhere and stores nothing. Neither
+  The tools RPC method `probe` returns only that owner, and calls Wispr Flow for nothing. A collector calls them to copy
+  these events to your private memory space, after you turn Wispr Flow on as a source; the plugin itself sends them
+  nowhere and stores nothing. Neither
   reads contacts, transcripts or notes, and `package.json`'s `sources` declares exactly `search_meetings` as the
   source's operation.
 - Tool results go to your model provider, like any other tool result in the session.
@@ -74,7 +75,7 @@ Things to know:
 ## Scripts
 
 The tools RPC (`wisprflow.meetings.tools`, see
-[docs/scripting.md](https://github.com/joe-broadhead/opencode-wisprflow/blob/HEAD/docs/scripting.md)) runs Wispr
+[docs/scripting.md](https://github.com/we-the-rebel-alliance/wisprflow-plugin/blob/master/docs/scripting.md)) runs Wispr
 Flow's every known tool for a script, with no model. It adds no authority:
 
 - A script names a session that names an agent, and runs as them. The rule for the tool's permission action is resolved

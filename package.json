@@ -1,8 +1,8 @@
 {
-  "name": "@joe-broadhead/opencode-wisprflow",
-  "version": "0.0.8",
+  "name": "@we-the-rebel-alliance/wisprflow-plugin",
+  "version": "0.0.0",
   "private": true,
-  "description": "Unofficial OpenCode plugin for Wispr Flow: search and read your Notetaker meetings, transcripts, Scratchpad notes and calendar through Wispr Flow's official MCP server",
+  "description": "Unofficial OpenCode plugin for Wispr Flow: its Notetaker meetings, transcripts, summaries, Scratchpad notes and calendar, through Wispr Flow's official MCP server",
   "keywords": [
     "opencode",
     "opencode-plugin",
@@ -12,11 +12,11 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/joe-broadhead/opencode-wisprflow.git"
+    "url": "git+https://github.com/we-the-rebel-alliance/wisprflow-plugin.git"
   },
-  "homepage": "https://github.com/joe-broadhead/opencode-wisprflow#readme",
+  "homepage": "https://github.com/we-the-rebel-alliance/wisprflow-plugin#readme",
   "bugs": {
-    "url": "https://github.com/joe-broadhead/opencode-wisprflow/issues"
+    "url": "https://github.com/we-the-rebel-alliance/wisprflow-plugin/issues"
   },
   "exports": {
     ".": "./dist/index.js",
@@ -36,7 +36,7 @@
     "CHANGELOG.md"
   ],
   "opencode": {
-    "host": ">=2.2.3 <2.4.0",
+    "host": ">=2.4.1 <2.5.0",
     "icons": [
       {
         "src": "assets/icon.svg",
@@ -137,9 +137,9 @@
     "capture": "node scripts/capture-tools.mjs"
   },
   "devDependencies": {
-    "@opencode/client": "2.2.3",
-    "@opencode/plugin": "2.2.3",
-    "@opencode/sdk": "2.2.3",
+    "@opencode/client": "2.4.1",
+    "@opencode/plugin": "2.4.1",
+    "@opencode/sdk": "2.4.1",
     "@opentui/core": "0.8.0",
     "@opentui/solid": "0.8.0",
     "@types/bun": "1.4.4",

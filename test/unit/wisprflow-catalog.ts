@@ -1,5 +1,5 @@
 // What OpenCode lists for Wispr Flow's server, https://api.wisprflow.ai/connect/mcp: `ctx.tool.list()` on OpenCode
-// 2.2.3, signed in to a Wispr Flow account, on 2026-11-05. Only names and facts from the tools' own descriptions and
+// captured from OpenCode, signed in to a Wispr Flow account, on 2026-11-05. Only names and facts from the tools' own descriptions and
 // input schemas are recorded here, and no credential of the test or its author is used. OpenCode's tool list carries no
 // annotations, so whether a tool reads comes from its description: every one reads, and none changes anything.
 // No runtime imports: scripts/check-wisprflow-tools.mjs loads this file with Node's type stripping to compare a saved

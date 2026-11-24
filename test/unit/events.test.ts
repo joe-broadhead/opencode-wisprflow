@@ -4,7 +4,7 @@
 import { describe, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
 import { encodeBoundCursor, encodeCursor } from "@we-the-rebel-alliance/source-contract/cursor"
-import { EVENT_LIMITS, PAGE, assertEventsListConformance, probeResultProblems, resultProblems, type EventsListResult } from "@we-the-rebel-alliance/source-contract/events"
+import { EVENT_LIMITS, PAGE, assertEventsListConformance, probeResultProblems, resultProblems, type EventsListResult, type EventsOwner } from "@we-the-rebel-alliance/source-contract/events"
 import {
   ACCOUNT,
   EVENTS_ACTION,
@@ -34,7 +34,7 @@ import { defaultRules, evaluate } from "../../src/permissions.js"
 const NOW = Date.parse("2026-10-25T12:00:00Z")
 const SINCE = "2026-09-28"
 /** OpenCode's sign-in: the credential's id, labelled with its label (an email here, which never becomes the id). */
-const OWNER = { id: "wisprflow:credential:cred-1", label: "Ada@Example.test" }
+const OWNER: EventsOwner = { id: "wisprflow:credential:cred-1", label: "Ada@Example.test", verified: false }
 
 interface Meeting {
   readonly id: string
@@ -101,7 +101,7 @@ function wisprflow(pageSize = 2, meetings: readonly Meeting[] = MEETINGS) {
   return { search, calls }
 }
 
-const list = (fake = wisprflow(), now = NOW, owner: typeof OWNER | undefined = OWNER) => (input: unknown) => listEvents(fake.search, owner, input, now)
+const list = (fake = wisprflow(), now = NOW, owner: EventsOwner | undefined = OWNER) => (input: unknown) => listEvents(fake.search, owner, input, now)
 const code = async (promise: Promise<unknown>) => {
   try {
     await promise
@@ -175,7 +175,7 @@ describe("events_list", () => {
   })
 
   test("names the plugin and when it read the page", async () => {
-    expect(await list()({ since: SINCE, limit: 1 })).toMatchObject({ plugin: "@joe-broadhead/opencode-wisprflow", asOf: new Date(NOW).toISOString() })
+    expect(await list()({ since: SINCE, limit: 1 })).toMatchObject({ plugin: "@we-the-rebel-alliance/wisprflow-plugin", asOf: new Date(NOW).toISOString() })
   })
 
   test("makes each meeting one event: attendees and a shared meeting's owner as actors, its share_link, and labels", async () => {
@@ -220,13 +220,13 @@ describe("events_list", () => {
   test("refuses another sign-in's cursor and another account with ACCOUNT_MISMATCH, before any read", async () => {
     const first = (await list()({ since: SINCE, limit: 1 })) as EventsListResult
     const fake = wisprflow()
-    expect(await code(list(fake, NOW, { id: "wisprflow:credential:other", label: "Other" })({ account: ACCOUNT, cursor: first.cursor }))).toBe("ACCOUNT_MISMATCH")
+    expect(await code(list(fake, NOW, { id: "wisprflow:credential:other", label: "Other", verified: false })({ account: ACCOUNT, cursor: first.cursor }))).toBe("ACCOUNT_MISMATCH")
     expect(await code(list(fake)({ account: "work" }))).toBe("ACCOUNT_MISMATCH")
     expect(await code(list(fake)({ account: "work", cursor: first.cursor }))).toBe("ACCOUNT_MISMATCH")
     expect(fake.calls).toEqual([])
   })
 
-  test("refuses a cursor it did not issue, an earlier version's included, and one passed without its account, before any read", async () => {
+  test("refuses a cursor it did not issue, one from another format, and one passed without its account, before any read", async () => {
     const first = (await list()({ since: SINCE, limit: 1 })) as EventsListResult
     const fake = wisprflow()
     const refused = (cursor: string) => code(list(fake)({ account: ACCOUNT, cursor }))
@@ -248,7 +248,7 @@ describe("events_list", () => {
   })
 
   test("keeps two sign-ins' overlapping listings apart: each page is its own owner's, and a cursor never crosses", async () => {
-    const other = { id: "wisprflow:credential:cred-2", label: "Wispr Flow" }
+    const other: EventsOwner = { id: "wisprflow:credential:cred-2", label: "Wispr Flow", verified: false }
     const [mine, theirs] = (await Promise.all([list()({ since: SINCE, limit: 2 }), list(wisprflow(), NOW, other)({ since: SINCE, limit: 2 })])) as EventsListResult[]
     expect(mine!.owner).toEqual(OWNER)
     expect(theirs!.owner).toEqual(other)
@@ -305,7 +305,7 @@ describe("events_list", () => {
       { id: "edge-b", title: "B", start_time: new Date(line + 90_000).toISOString(), attendees: [] },
       { id: "new-10", title: "C", start_time: new Date(NOW - 10 * DAY).toISOString(), attendees: [] },
     ])
-    const old = encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: NOW - 45 * DAY, i: "" })
+    const old = encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: NOW - 45 * DAY, i: "", f: NOW - 45 * DAY + 1, r: "" })
     const first = (await list(fake)({ account: ACCOUNT, cursor: old, limit: 1 })) as EventsListResult
     expect(first.gap?.reason).toBe("expired")
     expect(first.events.map((event) => event.external_id)).toEqual(["edge-a"])
@@ -347,7 +347,7 @@ describe("events_list", () => {
   })
 
   test("answers a gap once for a read that starts before the 30 days the free plan shows, and lists from there", async () => {
-    const old = encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: NOW - VISIBLE_MS - 10 * 86_400_000, i: "" })
+    const old = encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: NOW - VISIBLE_MS - 10 * 86_400_000, i: "", f: NOW - VISIBLE_MS - 10 * 86_400_000 + 1, r: "" })
     const fake = wisprflow(2, [...MEETINGS, { id: "w-00", title: "Locked on the free plan", start_time: new Date(NOW - VISIBLE_MS - 86_400_000).toISOString(), attendees: [] }])
     const first = (await list(fake)({ account: ACCOUNT, cursor: old, limit: 2 })) as EventsListResult
     expect(resultProblems(first, 2, MAX_BYTES)).toEqual([])
@@ -394,12 +394,11 @@ describe("events_list", () => {
     expect(listed).toEqual(["late-a", "late-b", "late-c"])
   })
 
-  test("reads a 0.0.4 cursor, which has no look-back, without listing anything again", async () => {
-    const first = (await list()({ since: SINCE, limit: 3 })) as EventsListResult
+  test("refuses a cursor with no look-back: only the current cursor shape is accepted", async () => {
+    const fake = wisprflow()
     const old = encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: Date.parse("2026-10-09T08:00:00Z"), i: "w-03a" })
-    const page = (await list()({ account: ACCOUNT, cursor: old, limit: PAGE.max })) as EventsListResult
-    expect(page.events.map((event) => event.external_id)).toEqual(EXPECTED.slice(3))
-    expect(first.events.map((event) => event.external_id)).toEqual(EXPECTED.slice(0, 3))
+    expect(await code(list(fake)({ account: ACCOUNT, cursor: old }))).toBe("CURSOR_INVALID")
+    expect(fake.calls).toEqual([])
   })
 
   test("refuses a cursor whose look-back is malformed, before any read", async () => {
@@ -451,10 +450,17 @@ function context(label = "Ada@Example.test", search = wisprflow().search) {
 }
 
 describe("the owner", () => {
+  test("is marked verified: false on every page and in probe", async () => {
+    const page = (await list()({ since: SINCE, limit: 1 })) as EventsListResult
+    expect(page.owner).toEqual(OWNER)
+    expect(page.owner.verified).toBe(false)
+    expect(wisprflowProbe(OWNER, {}).owner.verified).toBe(false)
+  })
+
   test("is always the sign-in's credential id, with its label for display only, an email label included", async () => {
     expect(await signedIn(context().ctx)).toEqual(OWNER)
-    expect(await signedIn(context("Wispr Flow").ctx)).toEqual({ id: "wisprflow:credential:cred-1", label: "Wispr Flow" })
-    expect(await signedIn(context("").ctx)).toEqual({ id: "wisprflow:credential:cred-1", label: "Wispr Flow sign-in" })
+    expect(await signedIn(context("Wispr Flow").ctx)).toEqual({ id: "wisprflow:credential:cred-1", label: "Wispr Flow", verified: false })
+    expect(await signedIn(context("").ctx)).toEqual({ id: "wisprflow:credential:cred-1", label: "Wispr Flow sign-in", verified: false })
     const none = { mcp: { list: async () => ({ data: [{ name: "wisprflow", status: { status: "connected" } }] }) }, integration: { connection: { active: async () => undefined } } }
     expect(await signedIn(none as never)).toBeUndefined()
   })

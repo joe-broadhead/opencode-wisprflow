@@ -98,7 +98,7 @@ const accessText = (access: Access) => {
   return `reads run without asking, including the personal-data reads; ${asking.join(" and ")} ask first`
 }
 
-const TESTED_TEXT = `${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}`
+const TESTED_TEXT = TESTED_HOSTS.length === 1 ? TESTED_HOSTS[0]! : `${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}`
 const LISTED_UNKNOWN = 20
 // A tool name comes from the server; list only plain names: the characters OpenCode keeps in a permission action.
 const SAFE_NAME = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/
@@ -298,8 +298,8 @@ const strings = { type: "array", items: { type: "string" } }
 const count = { type: "integer", minimum: 0 }
 
 /**
- * One read-only method for the TUI view and scripts. The TUI part does not receive the plugin options on 2.2 or 2.3, and
- * cannot see the server's own findings, so it asks the server for the same status /wisprflow-status reports.
+ * One read-only method for the TUI view and scripts. The TUI part does not receive the plugin options, and cannot see the
+ * server's own findings, so it asks the server for the same status /wisprflow-status reports.
  */
 export const StatusRpc = {
   id: PLUGIN_ID,

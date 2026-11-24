@@ -74,7 +74,7 @@ Things to know:
 ## Scripts
 
 The tools RPC (`wisprflow.meetings.tools`, see
-[docs/scripting.md](https://github.com/joe-broadhead/opencode-wisprflow/blob/HEAD/docs/scripting.md)) runs Wispr
+[docs/scripting.md](https://github.com/we-the-rebel-alliance/wisprflow-plugin/blob/master/docs/scripting.md)) runs Wispr
 Flow's every known tool for a script, with no model. It adds no authority:
 
 - A script names a session that names an agent, and runs as them. The rule for the tool's permission action is resolved

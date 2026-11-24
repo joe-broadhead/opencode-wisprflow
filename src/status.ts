@@ -98,7 +98,7 @@ const accessText = (access: Access) => {
   return `reads run without asking, including the personal-data reads; ${asking.join(" and ")} ask first`
 }
 
-const TESTED_TEXT = `${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}`
+const TESTED_TEXT = TESTED_HOSTS.length === 1 ? TESTED_HOSTS[0]! : `${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}`
 const LISTED_UNKNOWN = 20
 // A tool name comes from the server; list only plain names: the characters OpenCode keeps in a permission action.
 const SAFE_NAME = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/

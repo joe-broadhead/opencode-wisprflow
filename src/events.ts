@@ -30,11 +30,11 @@ import { reasonOf, shortReason } from "./redact.js"
  * times, every page while `has_more`. It never reads contacts, transcripts or notes.
  *
  * Wispr Flow has no tool that names the signed-in account, so the owner, in every page and in `probe` alike, is
- * OpenCode's sign-in for the wisprflow server, unverified: its id is always the credential's own id, which a new sign-in
- * changes, and its label, for display only, the credential's label. A label does not identify a connection and can be
- * renamed, so it never becomes the id. `probe` reads only that, and calls Wispr Flow for nothing. The cursor is bound to
- * the plugin, the source and the account, and holds the (start, id) of the last meeting listed with a digest of the
- * owner, so a cursor from another sign-in is ACCOUNT_MISMATCH before any read. A meeting is listed once it started
+ * OpenCode's sign-in for the wisprflow server, marked `verified: false`: its id is always the credential's own id, which
+ * a new sign-in changes, and its label, for display only, the credential's label. A label does not identify a connection
+ * and can be renamed, so it never becomes the id. `probe` reads only that, and calls Wispr Flow for nothing. The cursor
+ * is bound to the plugin, the source and the account, and holds the (start, id) of the last meeting listed with a digest
+ * of the owner, so a cursor from another sign-in is ACCOUNT_MISMATCH before any read. A meeting is listed once it started
  * SETTLE_MS ago, when its notes are most likely done; one whose title or summary holds a secret is refused for good.
  *
  * History can be lost before a reader sees it: on Wispr Flow's free plan, meetings older than 30 days are locked, and
@@ -55,7 +55,7 @@ import { reasonOf, shortReason } from "./redact.js"
  */
 
 /** The plugin's package name, which every page names. */
-export const PACKAGE = "@joe-broadhead/opencode-wisprflow"
+export const PACKAGE = "@we-the-rebel-alliance/wisprflow-plugin"
 /** The source every event names, and the `source` input the descriptor gives. */
 export const SOURCE = "wisprflow"
 /** The descriptor's id for it. */
@@ -187,9 +187,9 @@ export const EVENTS_OUTPUT = {
     owner: {
       type: "object",
       additionalProperties: false,
-      required: ["id", "label"],
-      properties: { id: { type: "string" }, label: { type: "string" } },
-      description: "OpenCode's sign-in for Wispr Flow.",
+      required: ["id", "label", "verified"],
+      properties: { id: { type: "string" }, label: { type: "string" }, verified: { type: "boolean", const: false } },
+      description: "OpenCode's sign-in for Wispr Flow; verified is always false, because Wispr Flow names no account.",
     },
     events: { type: "array", items: EVENT, description: "Oldest first." },
     cursor: { type: "string", description: "Pass it to the next call, with the account." },
@@ -349,7 +349,8 @@ export function readMeetingsPage(data: unknown): MeetingsPage {
 
 /**
  * OpenCode's sign-in for the wisprflow server, from its integration's active credential: the id is always
- * `wisprflow:credential:` and the credential's id, and the label, for display only, the credential's label.
+ * `wisprflow:credential:` and the credential's id, and the label, for display only, the credential's label. Wispr Flow
+ * names no account, so the owner is unverified and says so.
  */
 export async function signedIn(ctx: Pick<EventsContext, "mcp" | "integration">): Promise<EventsOwner | undefined> {
   const server = (await ctx.mcp.list()).data.find((entry) => entry.name === SERVER_NAME)
@@ -358,7 +359,7 @@ export async function signedIn(ctx: Pick<EventsContext, "mcp" | "integration">):
   const id = String(connection.id).trim()
   if (!id) return undefined
   const label = connection.label.replace(/[\u0000-\u001f\u007f]+/g, " ").trim()
-  return { id: `wisprflow:credential:${encodeURIComponent(id)}`, label: label || "Wispr Flow sign-in" }
+  return { id: `wisprflow:credential:${encodeURIComponent(id)}`, label: label || "Wispr Flow sign-in", verified: false }
 }
 
 interface Key {
@@ -387,9 +388,8 @@ interface CursorState {
 }
 
 /**
- * The state a cursor holds: anything that is not this source's bound cursor, an unbound cursor of an earlier version
- * included, is CURSOR_INVALID, and the caller starts again with since. A cursor of 0.0.4, with no look-back, covers
- * nothing behind its position, so nothing it listed is listed again.
+ * The state a cursor holds: anything that is not this source's bound cursor is CURSOR_INVALID, and the caller starts
+ * again with since. A cursor always carries the look-back it covers and the tags of the meetings it accounted for there.
  */
 function cursorState(cursor: string): CursorState {
   const decoded = decodeBoundCursor(BINDING, cursor)
@@ -399,7 +399,6 @@ function cursorState(cursor: string): CursorState {
   if (typeof t !== "number" || !Number.isSafeInteger(t) || typeof i !== "string" || typeof o !== "string" || !/^[0-9a-f]{16}$/.test(o)) return invalid()
   if (g !== undefined && (typeof g !== "number" || !Number.isSafeInteger(g) || g > t + 1)) return invalid()
   const line = typeof g === "number" ? { line: g } : {}
-  if (f === undefined && r === undefined) return { key: { t, i }, owner: o, floor: t + 1, tags: new Set(), ...line }
   if (typeof f !== "number" || !Number.isSafeInteger(f) || f > t + 1 || typeof r !== "string" || r.length % TAG_LENGTH !== 0 || r.length > MAX_TAGS * TAG_LENGTH || !/^[A-Za-z0-9_-]*$/.test(r)) return invalid()
   const tags = new Set(Array.from({ length: r.length / TAG_LENGTH }, (_, index) => r.slice(index * TAG_LENGTH, (index + 1) * TAG_LENGTH)))
   return { key: { t, i }, owner: o, floor: f, tags, ...line }
@@ -800,9 +799,9 @@ const PROBE_OUTPUT = {
     owner: {
       type: "object",
       additionalProperties: false,
-      required: ["id", "label"],
-      properties: { id: { type: "string" }, label: { type: "string" } },
-      description: "OpenCode's sign-in for Wispr Flow, as every page names it.",
+      required: ["id", "label", "verified"],
+      properties: { id: { type: "string" }, label: { type: "string" }, verified: { type: "boolean", const: false } },
+      description: "OpenCode's sign-in for Wispr Flow, as every page names it; verified is always false.",
     },
     trust: { type: "string", const: "untrusted" },
   },

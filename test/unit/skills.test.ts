@@ -46,32 +46,33 @@ describe("skills", () => {
     expect([...prefixed, ...bare].filter((tool) => !KNOWN.includes(tool))).toEqual([])
   })
 
-  test("both descriptions say to load before the first Wispr Flow call, and the main one stays off other notetakers and audio files", () => {
-    for (const name of NAMES) expect(parseSkill(name, "/x", read(name)).description).toContain("Load before the first Wispr Flow tool call")
+  test("the main description stays off other notetakers and audio files, and the brief stays off Granola", () => {
     const main = parseSkill("wisprflow", "/x", read("wisprflow")).description!
+    expect(main).toContain("when Wispr Flow is named")
     expect(main).toContain("Not for Granola or Plaud")
-    expect(main).toContain("dictation history")
+    expect(main).toContain("It can't read dictation history or transcribe audio")
+    const brief = parseSkill("wisprflow-meeting-brief", "/x", read("wisprflow-meeting-brief")).description!
+    expect(brief).toContain("when it is named or chosen")
+    expect(brief).toContain("Not for Granola notes")
   })
 
   // The namespace text tells the model to check Wispr Flow too when the user names no notes app and another is
   // connected, so neither description may argue against loading in that case; each still stays off Granola's own data.
-  test("both descriptions load before any Wispr Flow call, name the app's own words, and leave Granola's data alone", () => {
+  test("both descriptions name Wispr Flow and leave Granola's data alone", () => {
     for (const name of NAMES) {
       const description = parseSkill(name, "/x", read(name)).description!
-      expect(description).toContain("names Wispr Flow, Flow or its Notetaker")
-      expect(description).toContain("notes.wisprflow.ai link")
+      expect(description).toContain("Wispr Flow")
       expect(description).toMatch(/Not for Granola/)
       expect(description).not.toMatch(/names no notes app|names none/)
     }
-    expect(parseSkill("wisprflow-meeting-brief", "/x", read("wisprflow-meeting-brief")).description).toContain("or chooses Wispr Flow as the source")
     const rule = "named no notes app and another, such as Granola, is connected, say Wispr Flow is connected too, and ask which to use or check both, labelling each fact's source"
     for (const name of NAMES) expect(read(name)).toContain(rule)
     expect(read("wisprflow-meeting-brief")).toContain("Once the user named or chose Wispr Flow, build from it, and add another notes source only when asked.")
   })
 
-  test("wisprflow loads for a Wispr Flow transcription request, to say it can't and route it on-device", () => {
+  test("wisprflow says it can't transcribe audio and routes an audio file on-device", () => {
     const description = parseSkill("wisprflow", "/x", read("wisprflow")).description!
-    expect(description).toContain("or to transcribe an audio file, which this connection can't do")
+    expect(description).toContain("It can't read dictation history or transcribe audio")
     expect(read("wisprflow")).toContain("Utilities' on-device `speech_transcribe`")
   })
 
@@ -96,7 +97,7 @@ describe("skills", () => {
       for (const line of others) expect(line).toMatch(/what it shows is (?:under|in the `wisprflow` skill's) Sign-in/)
       expect(text).not.toMatch(/which account (?:is|it)/i)
     }
-    const host = checkHost("2.2.3", false)
+    const host = checkHost("2.4.1", false)
     const connected = formatStatus(buildStatus({ server: { status: "connected" }, host, tools: ["search_meetings"] }))
     for (const row of ["- Connection: connected", "- Tools: 1 available", "- Next step: "]) expect(connected).toContain(row)
     expect(connected).toContain("- Account: account name not reported by Wispr Flow's MCP")
@@ -122,7 +123,7 @@ describe("skills", () => {
 
   test.each(NAMES)("%s links only to plain files an agent can read, never to a GitHub page", (name) => {
     const links = read(name).match(/https?:\/\/[^\s)>]*[^\s)>.,]/g) ?? []
-    for (const link of links) expect(link).toMatch(/^https:\/\/raw\.githubusercontent\.com\/joe-broadhead\/opencode-wisprflow\/HEAD\//)
+    for (const link of links) expect(link).toMatch(/^https:\/\/raw\.githubusercontent\.com\/we-the-rebel-alliance\/wisprflow-plugin\/master\//)
   })
 
   test("wisprflow's scripts section creates a session for the script and never borrows one", () => {

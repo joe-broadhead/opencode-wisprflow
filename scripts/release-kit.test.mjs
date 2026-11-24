@@ -1974,11 +1974,14 @@ describe("CI: macOS on pushes to master and for releases, never on pull requests
     assert.deepEqual(ciJobsProblems(undefined, ["macos-26"]), ["no successful job on macos-26"])
   })
 
-  test("this repository's ci.yml: a pull request's matrix has no macOS entry, and a master push's does (npm run check)", () => {
-    const matrix = ciMatrix(readFileSync(join(SCRIPTS, "..", ".github", "workflows", "ci.yml"), "utf8"))
-    assert.deepEqual(matrix.problems, [])
-    assert.equal(matrix.pullRequest.some((runner) => /^macos-/.test(runner)), false)
-    assert.ok(matrix.push.includes("macos-26"), `a push to master runs ${matrix.push.join(", ")}`)
+  // Phase 4a gives every plugin one `ci` job and no runner matrix; phase 4b replaces this kit.
+  test("this repository's ci.yml: one ci job with the required runner rule (npm run check)", () => {
+    const text = readFileSync(join(SCRIPTS, "..", ".github", "workflows", "ci.yml"), "utf8")
+    assert.ok(text.includes("  ci:\n    name: ci\n"), "the job id and name are ci")
+    assert.ok(
+      text.includes("    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (vars.CI_RUNNER_PUBLIC || 'ubuntu-24.04') || 'ubuntu-24.04' }}"),
+      "the runner rule is the plugin-standard one",
+    )
   })
 })
 

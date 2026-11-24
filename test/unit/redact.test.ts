@@ -10,7 +10,7 @@ import { viewMessage } from "../../src/tui.js"
 import { mcpEditor, transforms, type McpEditor } from "./fake.js"
 
 const SECRETS = ["hunter2", "abcdefghijklmnop", "sk-live-0123456789abcdef", "eyJhbGciOi.eyJzdWIiOi.c2lnbmF0dXJl", "secret-path-123", "fake-signature", "x".repeat(48)]
-const host = checkHost("2.2.3", false)
+const host = checkHost("2.4.1", false)
 
 /** The three surfaces that show a status: the RPC's output, the session text and the dialog's text. */
 async function surfaces(status: Status) {

@@ -103,11 +103,11 @@ const list = (input: Record<string, unknown>, session: SessionContext = open) =>
 async function cases(): Promise<PageCase[]> {
   const first = (await list({ since: SINCE, limit: 2 }))["cursor"] as string
   const done = (await list({ since: SINCE, limit: 500 }))["cursor"] as string
-  const bound = (binding: { plugin: string; source: string; account: string }) => encodeBoundCursor(binding, { o: "0123456789abcdef", t: Date.parse(SINCE), i: "" })
+  const bound = (binding: { plugin: string; source: string; account: string }) => encodeBoundCursor(binding, { o: "0123456789abcdef", t: Date.parse(SINCE), i: "", f: Date.parse(SINCE) + 1, r: "" })
   // A cursor this sign-in was given 40 days before NOW: its position is older than the 30 days Wispr Flow's free plan
   // shows, so the history behind it may be locked. The owner digest is the one the source binds (sha256 of the id).
   const digest = createHash("sha256").update(`wisprflow:credential:${CREDENTIAL.id}`).digest("hex").slice(0, 16)
-  const stale = encodeBoundCursor({ plugin: "wisprflow", source: SOURCE, account: ACCOUNT }, { o: digest, t: NOW - 40 * 86_400_000, i: "" })
+  const stale = encodeBoundCursor({ plugin: "wisprflow", source: SOURCE, account: ACCOUNT }, { o: digest, t: NOW - 40 * 86_400_000, i: "", f: NOW - 40 * 86_400_000 + 1, r: "" })
   return [
     { name: "a first listing, one meeting refused for a secret", input: { since: SINCE }, expect: "page" },
     { name: "a first listing that names the account probe answers", input: { account: ACCOUNT, since: SINCE }, expect: "page" },

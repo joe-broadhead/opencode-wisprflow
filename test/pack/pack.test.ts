@@ -47,7 +47,7 @@ const DIST = ["dist/index.js", "dist/tui.js"]
 // Modules the host serves to plugins at runtime. Everything else must be inlined in the bundle.
 const SERVER_HOST_MODULES = [/^node:/, /^@opencode\/plugin(?:\/|$)/]
 const TUI_HOST_MODULES = [/^node:/, /^@opencode\/plugin(?:\/|$)/, /^@opentui\//, /^solid-js(?:\/|$)/]
-// The host packages OpenCode 2.2.3 ships; the versions come from devDependencies.
+// The host packages OpenCode 2.4.1 ships; the versions come from devDependencies.
 const HOST_PACKAGES = ["@opencode/plugin", "@opentui/core", "@opentui/solid", "solid-js"]
 // The stock OpenCode releases the package is tested on: the one list in src/constants.ts.
 const HOST_VERSIONS = TESTED_HOSTS

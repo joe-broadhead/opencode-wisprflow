@@ -1,9 +1,9 @@
 ---
 name: wisprflow-meeting-brief
-description: Load before the first Wispr Flow tool call for a brief, when the user names Wispr Flow, Flow or its Notetaker, gives a notes.wisprflow.ai link, or chooses Wispr Flow as the source - prep for their next or today's meeting from Wispr Flow's calendar, upcoming events and pre-reads, a catch-up on a recurring meeting before a call with a person or company, or a recap of a period's Wispr Flow meetings. Builds a sourced brief of decisions, open questions and who owes what. Not for Granola notes.
+description: A sourced meeting brief from Wispr Flow when it is named or chosen: prep for the next meeting, catch-up before a call, or a period's recap, with decisions, open questions and owners. Not for Granola notes.
 ---
 
-If Wispr Flow's tools are absent, run `/connect` and choose Wispr Flow, or on Jelly call jelly_connection_request.
+If Wispr Flow's tools are absent, run `/connect` and choose Wispr Flow.
 
 # Wispr Flow meeting brief
 

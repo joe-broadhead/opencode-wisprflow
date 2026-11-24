@@ -4,7 +4,7 @@ Every option is optional. The smallest setup is one entry in `plugins`:
 
 ```json
 {
-  "plugins": ["github:joe-broadhead/opencode-wisprflow#v0.0.8"]
+  "plugins": ["github:we-the-rebel-alliance/wisprflow-plugin#v0.0.0"]
 }
 ```
 
@@ -12,7 +12,7 @@ To set options, use the object form:
 
 ```json
 {
-  "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.8", "options": { "allowUntestedHost": true } }]
+  "plugins": [{ "package": "github:we-the-rebel-alliance/wisprflow-plugin#v0.0.0", "options": { "allowUntestedHost": true } }]
 }
 ```
 
@@ -23,18 +23,18 @@ To set options, use the object form:
 - Type: `true` or `false`.
 - Default: `false`.
 
-The plugin supports OpenCode `>=2.2.3 <2.4.0`, the range `opencode.host` in `package.json` declares, and every check
-runs on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2, the tested releases. Status shows the version, whether it is tested and the supported
-range in its `OpenCode` row, for example `2.2.5 (tested; supported range >=2.2.3 <2.4.0)`.
+The plugin supports OpenCode `>=2.4.1 <2.5.0`, the range `opencode.host` in `package.json` declares, and every check
+runs on 2.4.1, the tested release. Status shows the version, whether it is tested and the supported
+range in its `OpenCode` row, for example `2.4.1 (tested; supported range >=2.4.1 <2.5.0)`.
 
 - **A tested release:** the plugin starts.
-- **Another release inside the range, such as 2.2.99:** the plugin starts too. Status marks the version `untested`, and
+- **Another release inside the range, such as 2.4.99:** the plugin starts too. Status marks the version `untested`, and
   the status RPC's `host.tested` is `false`. The next step is the same as on a tested release.
-- **Outside the range, including 2.4.0, prereleases and development builds:** the plugin refuses to start, and
+- **Outside the range, including 2.5.0, prereleases and development builds:** the plugin refuses to start, and
   `/plugins` shows:
 
   ```text
-  HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.4.0, found 2.4.0. Next step: Use OpenCode >=2.2.3 <2.4.0, or set the plugin option "allowUntestedHost": true to run anyway.
+  HOST_UNTESTED: This plugin supports OpenCode >=2.4.1 <2.5.0, found 2.5.0. Next step: Use OpenCode >=2.4.1 <2.5.0, or set the plugin option "allowUntestedHost": true to run anyway.
   ```
 
 - **Outside the range with `"allowUntestedHost": true`:** it starts anyway, and `/wisprflow-status` and `/wisprflow`
@@ -277,13 +277,13 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | Code | When | Next step |
 | --- | --- | --- |
 | `OPTIONS_INVALID` | Setup: an option is unknown or has a wrong value. `/plugins` shows the message, which names the option and the accepted values. | Fix the plugin options in `opencode.json`. |
-| `HOST_UNTESTED` | Setup: OpenCode is outside `>=2.2.3 <2.4.0`, and `allowUntestedHost` is not set. | Use OpenCode `>=2.2.3 <2.4.0`, or set `"allowUntestedHost": true`. |
+| `HOST_UNTESTED` | Setup: OpenCode is outside `>=2.4.1 <2.5.0`, and `allowUntestedHost` is not set. | Use OpenCode `>=2.4.1 <2.5.0`, or set `"allowUntestedHost": true`. |
 | `STATUS_UNAVAILABLE` | `/wisprflow-status`, `/wisprflow` or the status RPC: the status could not be read, or the plugin is not running on the server. The RPC answers with its error `unavailable`. | The message's own next step: restart OpenCode and run the command again, or, when the plugin is not running, run `/plugins` to see why. |
 | `SKILLS_INVALID` | Setup: a skill file is missing or broken. The plugin still starts; status shows the problem. | Reinstall the plugin. |
 | `SERVER_NOT_REGISTERED` | Setup: the `wisprflow` server could not be registered. Status shows the problem. | Restart OpenCode. |
 | `RULES_NOT_ADDED` | Setup: the default permission rules could not be added, so Wispr Flow tools may run without asking. Status shows the problem. | Restart OpenCode. |
 | `INPUT_INVALID` | `events_list` or `probe`: the input breaks the shared contract, or a cursor comes without its account. | Pass account "default" with a cursor, and only since, cursor, limit (1 to 500), account and source, as the tool's schema describes. |
-| `CURSOR_INVALID` | `events_list`: the cursor was not issued by Wispr Flow's events_list, an earlier version's included. | Pass a cursor from a previous result for the same account, or start again with since. |
+| `CURSOR_INVALID` | `events_list`: the cursor was not issued by Wispr Flow's events_list. | Pass a cursor from a previous result for the same account, or start again with since. |
 | `ACCOUNT_MISMATCH` | `events_list` or `probe`: an account other than `default`, or a cursor issued for another Wispr Flow sign-in than the one OpenCode holds now. | Pass account "default"; after a new sign-in, call probe and start again with since. |
 | `SOURCE_UNKNOWN` | `events_list` or `probe`: a source other than `wisprflow`. | Leave source out, or pass "wisprflow". |
 | `NEEDS_SIGN_IN` | `events_list` or `probe`: OpenCode holds no Wispr Flow sign-in to name as the owner. | Run /connect and choose Wispr Flow to sign in, then call probe and start again with since. |
@@ -292,7 +292,7 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 For example:
 
 ```text
-OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the default), found "yes". Next step: Fix the plugin options in opencode.json, for example "plugins": [{ "package": "github:joe-broadhead/opencode-wisprflow#v0.0.8", "options": { "allowUntestedHost": true } }].
+OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the default), found "yes". Next step: Fix the plugin options in opencode.json, for example "plugins": [{ "package": "github:we-the-rebel-alliance/wisprflow-plugin#v0.0.0", "options": { "allowUntestedHost": true } }].
 ```
 
 Errors from Wispr Flow's server and from OpenCode pass through unchanged, except in the tools RPC for scripts, whose
@@ -309,10 +309,10 @@ consumer such as Memory's collector can run them unattended.
 
 ```
 probe({ source?, account? })
-  → { source: "wisprflow", account: "default", owner: { id, label }, trust: "untrusted" }
+  → { source: "wisprflow", account: "default", owner: { id, label, verified: false }, trust: "untrusted" }
 
 events_list({ since?, cursor?, limit?, account?, source? })
-  → { source: "wisprflow", account: "default", owner: { id, label }, events, cursor, more, refused?, gap?, plugin, asOf, trust: "untrusted" }
+  → { source: "wisprflow", account: "default", owner: { id, label, verified: false }, events, cursor, more, refused?, gap?, plugin, asOf, trust: "untrusted" }
 
 events_list({ source: "wisprflow", list: "meetings", account? })
   → { source: "wisprflow", account: "default", data: { items, editable: false }, asOf, trust: "untrusted" }
@@ -361,12 +361,12 @@ since }`, `since` being the minute's start, lists what follows and moves past it
 Wispr Flow has no tool that names the signed-in account, so the owner, on every page and in `probe` alike, is
 OpenCode's sign-in for the `wisprflow` server, unverified (OpenCode's sign-in, not a Wispr Flow identity): its id is
 always `wisprflow:credential:` and the credential's id, which a new sign-in changes, and its label, for display only,
-the credential's label. The owner today carries no `verified: false` field, so a consumer reading only the page cannot
-see that it is unverified and must not treat the owner as a verified provider identity. Renaming the label changes
+the credential's label. The owner carries `verified: false`, so a consumer reads it as unverified and never treats it as
+a provider-confirmed identity. Renaming the label changes
 neither the owner nor a cursor. `probe` asserts `wisprflow_probe` and reads only that sign-in: it calls
 Wispr Flow for nothing. The cursor is bound to the plugin, the source and the account, and holds a digest of the
 owner: a cursor from another sign-in is refused with `ACCOUNT_MISMATCH` before any read (call `probe`, then start
-again with `since`), and one this source did not issue, an earlier version's included, with `CURSOR_INVALID`.
+again with `since`), and one this source did not issue with `CURSOR_INVALID`.
 
 The default rules allow `wisprflow_events_list` and `wisprflow_probe`. `events_list`'s read, `wisprflow_search_meetings`,
 must be allowed too for the agent of the session that runs it; a consumer's grant names exactly that operation, from
@@ -389,7 +389,7 @@ status model. It holds no token and no URL query, and reading it never calls Wis
 | `unknownCount`, `unknownTools` | How many of them the plugin does not know, and at most 20 of their names, only those made of lowercase letters, digits and `_` |
 | `unguardedAgents` | Agents where a new Wispr Flow tool would run without asking; empty when there are none. An agent without a base allow, or whose own rules already ask or deny for every Wispr Flow tool, is not listed. |
 | `shadowedSkills` | Skills OpenCode loads instead of the plugin's own because they use the same id, each with `name` (the plugin's skill) and `path` (the file that takes its place); empty when there are none |
-| `host` | `version` (`null` if OpenCode reports none), `range` (the supported range) and `tested` (true only for 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2) |
+| `host` | `version` (`null` if OpenCode reports none), `range` (the supported range) and `tested` (true only for 2.4.1) |
 | `problems` | Setup problems, each `CODE: What happened. Next step: What to do.` |
 | `nextStep` | Exactly one next step: the `Next step` row, `Nothing to do.` when nothing is needed |
 

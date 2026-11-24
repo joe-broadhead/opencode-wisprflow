@@ -33,7 +33,7 @@ describe("parseOptions", () => {
       const { message, code, nextStep } = error as Error & { code: string; nextStep: string }
       expect(code).toBe("OPTIONS_INVALID")
       expect(message.startsWith("OPTIONS_INVALID: ")).toBe(true)
-      expect(nextStep).toContain(`"package": "github:joe-broadhead/opencode-wisprflow#v${version}", "options": { "allowUntestedHost": true }`)
+      expect(nextStep).toContain(`"package": "github:we-the-rebel-alliance/wisprflow-plugin#v${version}", "options": { "allowUntestedHost": true }`)
       expect(message.endsWith(`. Next step: ${nextStep}`)).toBe(true)
       expect(nextStep.endsWith(".")).toBe(true)
     }

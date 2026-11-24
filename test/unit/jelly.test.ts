@@ -3,7 +3,7 @@ import { DISPLAY_NAME, SERVER_NAME } from "../../src/constants.js"
 import { ACCESS_VALUES, parseOptions } from "../../src/options.js"
 import { defaultRules, evaluate, type Rule } from "../../src/permissions.js"
 import { PERSONAL_TOOLS, PLUGIN_READS, READ_TOOLS, WRITE_TOOLS } from "../../src/wisprflow-tools.js"
-import { type Declaration, type DeclaredTool, declarationProblems, docProblems, readPackage } from "../support/jelly-kit.js"
+import { type Declaration, type DeclaredTool, declarationProblems, readPackage } from "../support/jelly-kit.js"
 import { ACCESS_CHOICES, type PluginSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
 
 /**
@@ -61,10 +61,4 @@ describe("the jelly declaration", () => {
     }
   })
 
-})
-
-describe("docs/jelly.md", () => {
-  test("follows the plugin authors' standard", () => {
-    expect(docProblems(ROOT)).toEqual([])
-  })
 })

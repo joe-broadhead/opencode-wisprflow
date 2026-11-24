@@ -125,6 +125,13 @@ describe(`the plugin's own server on OpenCode ${HOST_VERSION}`, () => {
     expect(commands.map((command) => command.name)).toContain("wisprflow-status")
   })
 
+  // OpenCode 2.4.1 probes a server with no `protocol` with `server/discover` first; this fake declines it, so the
+  // connection falls back to `initialize`.
+  test("a server with no protocol is probed with server/discover before initialize", () => {
+    expect(host.fake.methods).toContain("server/discover")
+    expect(host.fake.methods.indexOf("server/discover")).toBeLessThan(host.fake.methods.indexOf("initialize"))
+  })
+
   test("P1: the rules sit right after the base allow in every built-in agent, once", async () => {
     const rules = await agentRules(host)
     for (const id of BUILT_IN) {
@@ -374,6 +381,9 @@ describe("a server that asks for a sign-in", () => {
     expect(text).toContain(`- Connection: sign-in required (${host.fake.url}, registered by this plugin)`)
     expect(text).toContain(`- Next step: ${SIGN_IN}`)
     expect(host.fake.markers.length).toBeGreaterThan(0)
+    // A 401 from the discovery probe ends the attempt: no initialize follows.
+    expect(host.fake.methods).toContain("server/discover")
+    expect(host.fake.methods).not.toContain("initialize")
   })
 })
 

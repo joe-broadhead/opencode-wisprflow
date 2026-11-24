@@ -10,5 +10,5 @@ The first release in the new org, rebuilt for OpenCode 2.4.1.
   the only tested host. Older-host harness branches and test matrices are gone.
 - The Code Mode namespace line is within the 400-character budget, and the two skill descriptions within 300.
 - The source's owner is marked `verified: false`: Wispr Flow names no account, so the owner is OpenCode's sign-in.
-- Removed the Jelly app guide, the Jelly connection request, and the legacy cursor shape; only the current bound cursor
+- Removed the legacy app guide, the legacy connection request, and the legacy cursor shape; only the current bound cursor
   is accepted.

@@ -12,7 +12,7 @@ interface Options {
   readonly access: Access
 }
 
-const EXAMPLE = `"plugins": [{ "package": "github:we-the-rebel-alliance/wisprflow-plugin#v0.0.0", "options": { "allowUntestedHost": true } }]`
+const EXAMPLE = `"plugins": [{ "package": "github:we-the-rebel-alliance/wisprflow-plugin#v<version>", "options": { "allowUntestedHost": true } }]`
 const ACCEPTED = {
   allowUntestedHost: "true or false (the default)",
   access: `"all" (the default), "ask-changes" or "read-only"`,

@@ -55,6 +55,8 @@ export interface FakeMcp {
   readonly origin: string
   /** Every token request's form, in order. */
   readonly tokens: Record<string, string>[]
+  /** Every JSON-RPC method the MCP endpoint received, in order, discovery probes included. */
+  readonly methods: string[]
   /** Tool names called, in order. */
   readonly calls: string[]
   /** Each tool call with the path it was sent to, in order. */
@@ -69,6 +71,7 @@ export interface FakeMcp {
 type Message = { jsonrpc: "2.0"; id?: number | string; method: string; params?: { protocolVersion?: string; name?: string; arguments?: { query?: unknown } } }
 
 export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMcp> {
+  const methods: string[] = []
   const calls: string[] = []
   const called: { tool: string; path: string }[] = []
   const inputs: { tool: string; arguments: unknown }[] = []
@@ -80,6 +83,10 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
   const answer = (message: Message, path: string) => {
     const reply = (result: unknown) => ({ jsonrpc: "2.0", id: message.id, result })
     switch (message.method) {
+      // OpenCode 2.4.1 probes a server that declares no protocol with `server/discover` first. This fake declines it,
+      // so a signed-in connection falls back to `initialize`; a 401 ends the attempt before `initialize` runs.
+      case "server/discover":
+        return { jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "Method not found: server/discover" } }
       case "initialize":
         return reply({ protocolVersion: message.params?.protocolVersion, capabilities: { tools: {} }, serverInfo: { name: "fake-wisprflow", version: "0.0.0" } })
       case "tools/list":
@@ -149,16 +156,19 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
     const route = new URL(request.url ?? "/", "http://127.0.0.1").pathname
     if (route.startsWith("/.well-known/") || route.startsWith("/oauth")) return signIn(request, response, route)
     markers.push(header(request, "x-wisprflow-test"))
+    if (request.method !== "POST") return void response.writeHead(405, { allow: "POST" }).end()
+    const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname
+    // Parse before the challenge so a 401 still records which method the probe sent: a discovery 401 ends the attempt.
+    const body = JSON.parse(await read(request)) as Message | Message[]
+    const messages = Array.isArray(body) ? body : [body]
+    for (const message of messages) methods.push(message.method)
     if (fake.challenge) {
       const metadata = `${fake.origin}/.well-known/oauth-protected-resource${route}`
       return void response
         .writeHead(401, { "content-type": "application/json", "www-authenticate": `Bearer resource_metadata="${metadata}", scope="${SCOPES}"` })
         .end(JSON.stringify({ error: "invalid_token" }))
     }
-    if (request.method !== "POST") return void response.writeHead(405, { allow: "POST" }).end()
-    const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname
-    const body = JSON.parse(await read(request)) as Message | Message[]
-    const replies = (Array.isArray(body) ? body : [body]).filter((message) => message.id !== undefined).map((message) => answer(message, path))
+    const replies = messages.filter((message) => message.id !== undefined).map((message) => answer(message, path))
     if (!replies.length) return void response.writeHead(202).end()
     response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(Array.isArray(body) ? replies : replies[0]))
   })
@@ -168,6 +178,7 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
     url: `http://127.0.0.1:${port}/mcp`,
     origin: `http://127.0.0.1:${port}`,
     tokens,
+    methods,
     calls,
     called,
     inputs,

@@ -7,10 +7,10 @@ import { type Declaration, type DeclaredTool, declarationProblems, readPackage }
 import { ACCESS_CHOICES, type PluginSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
 
 /**
- * The `jelly` section of package.json, which Jelly reads without loading the plugin. Jelly writes each declared effect
+ * The `jelly` section of package.json, read by an app without loading the plugin. It writes each declared effect
  * as that tool's default (its agents have no base allow rule, so this plugin's own rules never reach them), so each
  * declared effect must be what the default rules give the tool in OpenCode. The shared kit checks the declaration
- * against Jelly's plugin authors' standard; the tests below add what only Wispr Flow declares.
+ * against the legacy plugin authors' standard; the tests below add what only Wispr Flow declares.
  */
 
 const ROOT = new URL("../../", import.meta.url)
@@ -26,7 +26,7 @@ describe("the jelly declaration", () => {
 
   test("declares every Wispr Flow tool as allowed, reads first, in list order", () => {
     for (const tool of READ_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
-    // Every tool is allowed by default, so Jelly's declaration allows the reads too, `get_participant_contacts` included.
+    // Every tool is allowed by default, so the legacy declaration allows the reads too, `get_participant_contacts` included.
     for (const tool of PERSONAL_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
     for (const tool of WRITE_TOOLS) expect(byPermission.get(`wisprflow_${tool}`)).toMatchObject({ effect: "ask", readOnly: false })
     // The plugin's own read, events_list, is declared after Wispr Flow's reads.
@@ -45,7 +45,7 @@ describe("the jelly declaration", () => {
     expect(jelly.signIns).toEqual([{ id: SERVER_NAME, label: DISPLAY_NAME, server: SERVER_NAME }])
   })
 
-  test("its settings pass Jelly's setting contract, and access offers only values the parser takes", () => {
+  test("its settings pass the legacy setting contract, and access offers only values the parser takes", () => {
     const { settings } = jelly.contributes as { settings: PluginSetting[] }
     expect(settingsProblems(settings)).toEqual([])
     const access = settings.find((setting) => setting.key === "access")!

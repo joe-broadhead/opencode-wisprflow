@@ -39,7 +39,7 @@ npm run check
 | Stage | What it does |
 | --- | --- |
 | `typecheck` | `tsc --noEmit` over `src/` and `test/`, strict, with unused names as errors |
-| `unit` | `bun test ./test/unit`: every module in `src/`, the docs' counts and error table, and the Jelly declaration |
+| `unit` | `bun test ./test/unit`: every module in `src/`, the docs' counts and error table, and the legacy declaration |
 | `conformance` | `bun test ./test/conformance`: the source contract's conformance kit over `package.json`'s `sources` on a synthetic Wispr Flow; writes `reports/conformance-report.json` (the same bytes every run) for a release to attach |
 | `build` | `node scripts/build.mjs`: deletes `dist/` and bundles `src/index.ts` and `src/tui.ts` with esbuild into the self-contained `dist/index.js` and `dist/tui.js`. Fails if a bundle imports anything the host does not provide |
 | `host` | `bun test ./test/host`: the plugin inside an embedded OpenCode host on the tested release (`@opencode/sdk` 2.4.1) |
@@ -148,7 +148,7 @@ npm run drift -- <tools.json> --strict
 5. Update `test/unit/wisprflow-catalog.ts` (parameters, required ones, and whether a result holds a body),
    `jelly.tools` in `package.json`, the skills' tool names and parameters,
    and the counts and method list in `README.md`, `SECURITY.md`, `docs/configuration.md` and `docs/scripting.md`. Run
-   `npm run check`: the tool-list test fails if the lists differ from the catalog, the Jelly test
+   `npm run check`: the tool-list test fails if the lists differ from the catalog, the legacy test
    if a declared tool or effect differs from the lists and the default rules, the docs test on a stale count or
    method list, the skills test if a skill names a tool the plugin doesn't know, and the examples test if a call
    example uses a tool or parameter the catalog lacks.
@@ -303,5 +303,5 @@ Each release has its own tag, and a Git install does not update by itself. To mo
 Or add the plugin to `opencode.json` instead, with the same spec:
 
 ```json
-{ "plugins": [{ "package": "github:we-the-rebel-alliance/wisprflow-plugin#v0.0.0" }] }
+{ "plugins": [{ "package": "github:we-the-rebel-alliance/wisprflow-plugin#v<version>" }] }
 ```

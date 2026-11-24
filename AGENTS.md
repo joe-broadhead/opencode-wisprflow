@@ -1,9 +1,9 @@
 # Repository rules
 
 This repository builds `@we-the-rebel-alliance/wisprflow-plugin`, an OpenCode plugin that registers Wispr Flow's
-official MCP server and adds default permission rules, a status command and view, two skills, and a tools RPC for
-scripts. It adds no tool of its own. Read [docs/architecture.md](docs/architecture.md) before changing code and
-[CONTRIBUTING.md](CONTRIBUTING.md) for the checks.
+official MCP server and adds default permission rules, a status command and view, two skills, a tools RPC for scripts,
+and the `events_list` model tool (Code Mode `tools.wisprflow.events_list`). Read
+[docs/architecture.md](docs/architecture.md) before changing code and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks.
 
 `v0.0.0` starts the repository's new org and history. It is being rebuilt on plugin-contract v0
 ([tracking issue](https://github.com/we-the-rebel-alliance/wisprflow-plugin/issues/25)); the contract work comes next.

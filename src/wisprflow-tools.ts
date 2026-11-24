@@ -35,7 +35,7 @@ export const READ_TOOLS: readonly string[] = [
 export const PERSONAL_TOOLS: readonly string[] = ["get_participant_contacts"]
 
 /**
- * The plugin's own reads in the wisprflow namespace: events_list, Memory's source of meetings, which reads through
+ * The plugin's own reads in the wisprflow namespace: events_list, a collector's source of meetings, which reads through
  * search_meetings. Allowed like the known reads, and a tools RPC method of its own; never one of Wispr Flow's tools.
  */
 export const PLUGIN_READS: readonly string[] = ["events_list"]

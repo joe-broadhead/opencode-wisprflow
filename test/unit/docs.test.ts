@@ -14,8 +14,7 @@ const ROOT = fileURLToPath(new URL("../..", import.meta.url))
 const DOCS = readdirSync(join(ROOT, "docs")).map((name) => `docs/${name}`)
 // Everything a user or the model reads about the current release.
 const FILES = ["README.md", "SECURITY.md", "CONTRIBUTING.md", "AGENTS.md", "CHANGELOG.md", ...DOCS, ...readdirSync(join(ROOT, "skills")).map((name) => `skills/${name}/SKILL.md`)]
-const { version } = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { version: string }
-const SPEC = `we-the-rebel-alliance/wisprflow-plugin#v${version}`
+const SPEC = "we-the-rebel-alliance/wisprflow-plugin#v<version>"
 const text = (file: string) => readFileSync(join(ROOT, file), "utf8").replace(/\s+/g, " ")
 
 describe("docs", () => {
@@ -52,8 +51,16 @@ describe("docs", () => {
     }
   })
 
-  test("the install line names this repository and this release", () => {
-    expect(text("README.md")).toContain(`opencode plugin add github:${SPEC}`)
+  test("the install line names this repository, a release tag and the first release", () => {
+    const readme = text("README.md")
+    expect(readme).toContain(`opencode plugin add github:${SPEC}`)
+    expect(readme).toContain("Install from a release: `opencode plugin add github:we-the-rebel-alliance/wisprflow-plugin#v<version>`. The first release on plugin-contract is v0.0.0 (phase 4b).")
+  })
+
+  test.each(FILES)("%s installs only from a release tag", (file) => {
+    for (const match of text(file).matchAll(/opencode plugin add (github:we-the-rebel-alliance\/wisprflow-plugin[^\s`"]*)/g)) {
+      expect({ file, spec: match[1] }).toEqual({ file, spec: expect.stringContaining("#v") })
+    }
   })
 
   // Once the plugin is removed and OpenCode reloads, `mcp logout wisprflow` finds no server: the README signs out first,

@@ -298,8 +298,8 @@ const strings = { type: "array", items: { type: "string" } }
 const count = { type: "integer", minimum: 0 }
 
 /**
- * One read-only method for the TUI view and scripts. The TUI part does not receive the plugin options on 2.2 or 2.3, and
- * cannot see the server's own findings, so it asks the server for the same status /wisprflow-status reports.
+ * One read-only method for the TUI view and scripts. The TUI part does not receive the plugin options, and cannot see the
+ * server's own findings, so it asks the server for the same status /wisprflow-status reports.
  */
 export const StatusRpc = {
   id: PLUGIN_ID,

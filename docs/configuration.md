@@ -4,7 +4,7 @@ Every option is optional. The smallest setup is one entry in `plugins`:
 
 ```json
 {
-  "plugins": ["github:we-the-rebel-alliance/wisprflow-plugin#v0.0.0"]
+  "plugins": ["github:we-the-rebel-alliance/wisprflow-plugin#v<version>"]
 }
 ```
 
@@ -12,7 +12,7 @@ To set options, use the object form:
 
 ```json
 {
-  "plugins": [{ "package": "github:we-the-rebel-alliance/wisprflow-plugin#v0.0.0", "options": { "allowUntestedHost": true } }]
+  "plugins": [{ "package": "github:we-the-rebel-alliance/wisprflow-plugin#v<version>", "options": { "allowUntestedHost": true } }]
 }
 ```
 
@@ -292,7 +292,7 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 For example:
 
 ```text
-OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the default), found "yes". Next step: Fix the plugin options in opencode.json, for example "plugins": [{ "package": "github:we-the-rebel-alliance/wisprflow-plugin#v0.0.0", "options": { "allowUntestedHost": true } }].
+OPTIONS_INVALID: The option "allowUntestedHost" must be true or false (the default), found "yes". Next step: Fix the plugin options in opencode.json, for example "plugins": [{ "package": "github:we-the-rebel-alliance/wisprflow-plugin#v<version>", "options": { "allowUntestedHost": true } }].
 ```
 
 Errors from Wispr Flow's server and from OpenCode pass through unchanged, except in the tools RPC for scripts, whose
@@ -305,7 +305,7 @@ this feature." or "Too many requests", are listed in the README's Troubleshootin
 (`@we-the-rebel-alliance/source-contract`): `wisprflow_events_list` (`tools.wisprflow.events_list` in Code Mode, and
 the tools RPC method `events_list`) lists the meetings Wispr Flow captured since a cursor, as normalised events, oldest
 first, and the tools RPC method `probe` names who is signed in. Both only read, never ask and call no model, so a
-consumer such as Memory's collector can run them unattended.
+consumer such as a collector can run them unattended.
 
 ```
 probe({ source?, account? })

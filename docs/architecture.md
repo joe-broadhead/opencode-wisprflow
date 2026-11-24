@@ -2,8 +2,8 @@
 
 The plugin is a thin layer over Wispr Flow's official MCP server. OpenCode owns the MCP transport, OAuth, credentials,
 permission prompts and tool output limits. The plugin registers the server, names its `/connect` entry, adds default
-permission rules, reports status, ships two skills, and lets scripts call the known reads through a tools RPC. It adds
-no tool of its own and has no runtime dependencies.
+permission rules, reports status, ships two skills, adds the `events_list` model tool, and lets scripts call the known
+reads through a tools RPC. It has no runtime dependencies.
 
 ## Layout
 
@@ -43,12 +43,14 @@ typechecks. The package exports `.` (`dist/index.js`) and `./tui` (`dist/tui.js`
    adopts the user's own entry at exactly that origin and path. Any other URL, the same one with a trailing slash
    included, is a conflict: nothing is added, and status reports it.
 5. `ctx.tool.transform` gives the `wisprflow` namespace its Code Mode description.
-6. `ctx.agent.transform` inserts the default rules after each agent's base `* * allow`.
-7. `ctx.skill.transform`, `ctx.command.transform` (`/wisprflow-status`) and `ctx.rpc.register`
+6. `registerEvents` adds `wisprflow_events_list` to that namespace, unless the `wisprflow` name belongs to another
+   server.
+7. `ctx.agent.transform` inserts the default rules after each agent's base `* * allow`.
+8. `ctx.skill.transform`, `ctx.command.transform` (`/wisprflow-status`) and `ctx.rpc.register`
    (`wisprflow.meetings/status`).
-8. `registerToolsRpc`, the source contract's, registers the tools RPC, `wisprflow.meetings.tools`, with `events_list`
+9. `registerToolsRpc`, the source contract's, registers the tools RPC, `wisprflow.meetings.tools`, with `events_list`
    and `probe`, and its `evaluate` hook.
-9. `watchIntegration` starts. Setup returns one cleanup that stops it and disposes the tools RPC.
+10. `watchIntegration` starts. Setup returns one cleanup that stops it and disposes the tools RPC.
 
 Transforms are synchronous and never throw: a failure is kept as a problem for status, and cleared when the next replay
 succeeds.

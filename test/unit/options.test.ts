@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { readFileSync } from "node:fs"
 import { ACCESS_VALUES, parseOptions } from "../../src/options.js"
-
-const { version } = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string }
 
 describe("parseOptions", () => {
   test("defaults to a supported host and every tool allowed", () => {
@@ -33,7 +30,7 @@ describe("parseOptions", () => {
       const { message, code, nextStep } = error as Error & { code: string; nextStep: string }
       expect(code).toBe("OPTIONS_INVALID")
       expect(message.startsWith("OPTIONS_INVALID: ")).toBe(true)
-      expect(nextStep).toContain(`"package": "github:we-the-rebel-alliance/wisprflow-plugin#v${version}", "options": { "allowUntestedHost": true }`)
+      expect(nextStep).toContain(`"package": "github:we-the-rebel-alliance/wisprflow-plugin#v<version>", "options": { "allowUntestedHost": true }`)
       expect(message.endsWith(`. Next step: ${nextStep}`)).toBe(true)
       expect(nextStep.endsWith(".")).toBe(true)
     }

@@ -92,6 +92,9 @@ async function ownerFor(host: Host, name: string): Promise<EventsOwner> {
   if (server.status.status === "needs_auth") {
     throw new SourceError({ code: "NEEDS_SIGN_IN", what: `the ${name} MCP server needs a sign-in`, next: SIGN_IN(name) })
   }
+  if (server.status.status === "pending") {
+    throw new SourceError({ code: "UNAVAILABLE", what: `the ${name} MCP server is still connecting`, next: "Call again in a few seconds." })
+  }
   if (server.status.status === "failed") {
     throw new SourceError({
       code: "UNAVAILABLE",

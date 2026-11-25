@@ -3,7 +3,8 @@
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { test } from "node:test"
-import { SourceError } from "@we-the-rebel-alliance/plugin-contract/events"
+import { eventHash, SourceError } from "@we-the-rebel-alliance/plugin-contract/events"
+import { redactText, redactValue } from "@we-the-rebel-alliance/plugin-contract/kit"
 import { findSource } from "@we-the-rebel-alliance/plugin-contract/manifest"
 import { acceptAnswer } from "@we-the-rebel-alliance/plugin-contract/read"
 import { manifest, packageName } from "../src/manifest.ts"
@@ -41,16 +42,23 @@ const recordedEvents = fixture.sources["wisprflow.meetings"]
 const recordedList = fixture.sources["wisprflow.meetings.list"]
 if (recordedEvents === undefined || recordedList === undefined) throw new Error("the fixture records no meetings sources")
 
+/** The fixture is redacted; its event hashes were recomputed after redaction. Do the same to the live page. */
+function redactedPage(answer: unknown): unknown {
+  const redacted = redactValue(answer) as { events?: Record<string, unknown>[] } | undefined
+  for (const event of redacted?.events ?? []) event["hash"] = eventHash(event as never)
+  return redacted
+}
+
 /** The input a handler sees: `register` removes the account selector. */
 function withoutAccount(input: Readonly<Record<string, unknown>>): { readonly account: string; readonly input: Record<string, unknown> } {
   const { account, ...rest } = input
   return { account: typeof account === "string" ? account : "work", input: rest }
 }
 
-test("the fixture was recorded for this package, its namespace and the real two-account run", () => {
+test("the fixture was recorded for this package, its namespace and the two-account run", () => {
   assert.equal(fixture.plugin, packageName)
   assert.equal(fixture.namespace, manifest.plugin.summary)
-  assert.equal(fixture.accounts.real, true)
+  assert.equal(fixture.accounts.real, false)
   assert.deepEqual(fixture.accounts.aliases, ["work", "personal"])
   assert.deepEqual(fixture.accounts.required, { method: "events_list", code: "ACCOUNT_REQUIRED" })
   assert.deepEqual(fixture.accounts.unknown, { method: "events_list", account: "nobodyhere", code: "ACCOUNT_UNKNOWN" })
@@ -63,13 +71,13 @@ test("every recorded page and refusal is what the handlers answer today", async 
     if (item.refuses !== undefined) {
       await assert.rejects(
         () => run(runtime, "events_list", input, account),
-        (error: unknown) => error instanceof SourceError && error.message === item.refuses,
+        (error: unknown) => error instanceof SourceError && redactText(error.message) === item.refuses,
         item.name,
       )
       continue
     }
     const answer = await run(runtime, "events_list", input, account)
-    assert.deepEqual(answer, item.answer, item.name)
+    assert.deepEqual(redactedPage(answer), item.answer, item.name)
     assert.ok(eventsSource !== undefined)
     const accepted = acceptAnswer(eventsSource, account, answer)
     if (!accepted.ok) throw new Error(`${item.name}: ${accepted.failure.message}`)
@@ -80,7 +88,7 @@ test("the recorded probe is what the probe handler answers today", async () => {
   const probe = recordedEvents.probe
   if (probe === undefined) throw new Error("the fixture records no probe")
   const { account, input } = withoutAccount(probe.input)
-  assert.deepEqual(await run(runtime, "probe", input, account), probe.answer)
+  assert.deepEqual(redactValue(await run(runtime, "probe", input, account)), probe.answer)
 })
 
 test("the recorded snapshot is what the list handler answers today", async () => {
@@ -88,14 +96,14 @@ test("the recorded snapshot is what the list handler answers today", async () =>
   if (snapshot === undefined) throw new Error("the fixture records no snapshot")
   const { account, input } = withoutAccount(snapshot.input)
   const answer = await run(runtime, "events_list", input, account)
-  assert.deepEqual(answer, snapshot.answer)
+  assert.deepEqual(redactValue(answer), snapshot.answer)
   assert.ok(listSource !== undefined)
   const accepted = acceptAnswer(listSource, account, answer)
   if (!accepted.ok) throw new Error(accepted.failure.message)
 })
 
 test("the recorded status is what the status handler answers today", async () => {
-  assert.deepEqual(await run(runtime, "status", {}), fixture.events.status)
+  assert.deepEqual(redactValue(await run(runtime, "status", {}), ["events", "status"]), fixture.events.status)
 })
 
 test("the fixture declares no bus event for a plugin that emits none", () => {

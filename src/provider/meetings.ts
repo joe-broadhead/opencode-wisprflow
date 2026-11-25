@@ -71,9 +71,6 @@ function refuse(code: string, what: string, next: string): never {
   throw new SourceError({ code, what: `${what}.`, next })
 }
 
-export const EVENTS_DESCRIPTION =
-  "List the meetings Wispr Flow captured since a cursor, as normalised events, oldest first, each with its title, start, up to 5 attendees and its share link. A meeting is listed once it started 2 hours ago. Pass the previous page's cursor, with its account, to list what came after; without one it starts at since, or 24 hours ago. A read that starts more than 29 days ago answers a gap and lists from 29 days ago: no provider tool names the plan, so every sign-in is read as the free plan, which locks meetings older than 30 days. To find or read one meeting for the user, use the MCP tools search_meetings and get_meeting."
-
 /** A meeting that started within a searched window. */
 export interface Attendee {
   readonly name?: string
@@ -149,11 +146,20 @@ function person(value: unknown): Attendee | undefined {
   return { ...(name ? { name } : {}), ...(email && /^[^\s@]+@[^\s@]+$/.test(email) ? { email } : {}) }
 }
 
+const PAGE_NEXT = "Read again with the same cursor; if it keeps failing, update the plugin."
+
+/** A provider answer this plugin cannot read. Missing data is unknown, never an empty page. */
+function pageError(what: string): never {
+  throw new SourceError({ code: "SCHEMA_VIOLATION", what: `${what}.`, next: PAGE_NEXT })
+}
+
 /** A `search_meetings` page: its meetings, the next cursor while `has_more`, and whether the provider capped it. */
 export function readMeetingsPage(data: unknown): MeetingsPage {
+  if (!record(data) && !Array.isArray(data)) pageError("search_meetings did not answer a page")
   const page = record(data) ? data : {}
-  const list = Array.isArray(data) ? data : (["meetings", "results", "items", "data"].map((key) => page[key]).find(Array.isArray) ?? [])
-  const meetings = (list as unknown[]).flatMap((item): MeetingFacts[] => {
+  const list = Array.isArray(data) ? data : ["meetings", "results", "items", "data"].map((key) => page[key]).find(Array.isArray)
+  if (!Array.isArray(list)) pageError("search_meetings answered no meetings list")
+  const meetings = list.flatMap((item): MeetingFacts[] => {
     if (!record(item)) return []
     const id = text(item.id) ?? text(item.meeting_id)
     const time = timeOf(item)
@@ -178,7 +184,8 @@ export function readMeetingsPage(data: unknown): MeetingsPage {
   })
   const next = text(page.next_cursor)
   const more = page.has_more === true
-  return { meetings, ...(more && next ? { next } : {}), more, truncated: page.truncated === true }
+  if (more && next === undefined) pageError("search_meetings said has_more without a next_cursor")
+  return { meetings, ...(more && next !== undefined ? { next } : {}), more, truncated: page.truncated === true }
 }
 
 /**
@@ -248,8 +255,9 @@ async function searchWindow(search: Search, from: number, to: number): Promise<{
     if (page >= MAX_PAGES) return split()
     const result = readMeetingsPage(await search({ ...filters, ...(cursor === undefined ? {} : { cursor }) }))
     if (result.truncated) return split()
+    if (result.more && result.next === cursor) pageError("search_meetings repeated the cursor while has_more")
     found.push(...result.meetings.filter((meeting) => meeting.time >= from && meeting.time <= to))
-    if (!result.more || result.next === undefined || result.next === cursor) return { meetings: found, holes: [] }
+    if (!result.more || result.next === undefined) return { meetings: found, holes: [] }
     cursor = result.next
   }
 }
@@ -438,8 +446,8 @@ export interface MeetingsList {
 function snapshotInput(input: Record<string, unknown>) {
   if (input.source !== undefined && input.source !== SOURCE) refuse("SOURCE_UNKNOWN", "This plugin lists one source, wisprflow", 'Leave source out, or pass "wisprflow".')
   if (input.list !== undefined && input.list !== "meetings") refuse("INPUT_INVALID", "The list snapshot takes list: meetings, and nothing else", 'Pass list "meetings" with source "wisprflow".')
-  for (const key of ["cursor", "since", "limit"]) {
-    if (input[key] !== undefined) refuse("INPUT_INVALID", `The meetings list does not take ${key}`, "Pass source and list only; read the events source for a cursor.")
+  for (const key of ["cursor", "since", "limit", "scope"]) {
+    if (input[key] !== undefined) refuse("INPUT_INVALID", `The meetings list does not take ${key}`, "Pass source and list only; read the events source for a cursor or a scope.")
   }
 }
 

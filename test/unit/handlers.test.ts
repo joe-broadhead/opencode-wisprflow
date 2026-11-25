@@ -4,6 +4,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import { SourceError } from "@we-the-rebel-alliance/plugin-contract/events"
 import { findSource } from "@we-the-rebel-alliance/plugin-contract/manifest"
+import { OUTPUTS } from "@we-the-rebel-alliance/plugin-contract/outputs"
 import { acceptAnswer } from "@we-the-rebel-alliance/plugin-contract/read"
 import { manifest } from "../../src/manifest.ts"
 import { fakeHost, run, runtimeFor } from "../support/handlers.ts"
@@ -93,12 +94,15 @@ test("events_list answers the meetings list snapshot, which the consumer's own c
   assert.equal(accepted.kind, "snapshot")
   const data = accepted.snapshot.data as { items: { id: string }[] }
   assert.equal(data.items[0]?.id, "w-06")
+  const checked = OUTPUTS.list.check(data)
+  if (!checked.ok) throw new Error(checked.problems.join("; "))
 })
 
 test("events_list refuses an unknown source, an invalid limit and a snapshot with a cursor", async () => {
   assert.equal(await codeOf(() => run(runtime, "events_list", { source: "other" })), "SOURCE_UNKNOWN")
   assert.equal(await codeOf(() => run(runtime, "events_list", { limit: 0 })), "INPUT_INVALID")
   assert.equal(await codeOf(() => run(runtime, "events_list", { list: "meetings", cursor: "x" })), "INPUT_INVALID")
+  assert.equal(await codeOf(() => run(runtime, "events_list", { list: "meetings", scope: { folders: ["x"] } })), "INPUT_INVALID")
   assert.equal(await codeOf(() => run(runtime, "events_list", { list: "other" })), "INPUT_INVALID")
 })
 

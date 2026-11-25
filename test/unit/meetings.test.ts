@@ -62,10 +62,11 @@ test("the meetings list screens the whole title before the cut, and lists an id 
   assert.deepEqual(answer.data.items, [{ id: "w-dup", text: "Once" }])
 })
 
-test("the meetings list refuses a cursor, a since or a limit, and an unknown source", async () => {
+test("the meetings list refuses a cursor, a since, a limit or a scope, and an unknown source", async () => {
   const search = wisprflow().search
   assert.equal(await code(meetingsList(search, ACCOUNT, { source: SOURCE, list: "meetings", cursor: "x" }, NOW)), "INPUT_INVALID")
   assert.equal(await code(meetingsList(search, ACCOUNT, { source: SOURCE, list: "meetings", since: SINCE }, NOW)), "INPUT_INVALID")
+  assert.equal(await code(meetingsList(search, ACCOUNT, { source: SOURCE, list: "meetings", scope: { folders: ["secret"] } }, NOW)), "INPUT_INVALID")
   assert.equal(await code(meetingsList(search, ACCOUNT, { source: "other", list: "meetings" }, NOW)), "SOURCE_UNKNOWN")
 })
 
@@ -106,7 +107,15 @@ test("reads meetings, their attendees, owner, share_link and flags, and the curs
     truncated: false,
   })
   assert.deepEqual(readMeetingsPage({ meetings: [{ id: "x", start_time: "Oct 1" }], has_more: false, next_cursor: "ignored" }), { meetings: [], more: false, truncated: false })
-  assert.deepEqual(readMeetingsPage("not json"), { meetings: [], more: false, truncated: false })
+  const schemaError = (value: unknown) =>
+    assert.throws(
+      () => readMeetingsPage(value),
+      (error: unknown) => error instanceof SourceError && error.code === "SCHEMA_VIOLATION" && error.message.includes("Next step: "),
+    )
+  schemaError("not json")
+  schemaError({})
+  schemaError({ meetings: [], has_more: true })
+  schemaError({ meetings: "not a list" })
 })
 
 test("a tool result's data is its structured output, or its text parsed as JSON", () => {
@@ -186,7 +195,7 @@ test("a cursor this source did not issue, from another format or another plugin,
   const fake = wisprflow()
   const refused = (cursor: string) => code(list(fake)({ cursor }))
   assert.equal(await refused("not-a-cursor"), "CURSOR_INVALID")
-  assert.equal(await refused(encodeBoundCursor({ ...BINDING, plugin: "granola" }, { o: digestOf(OWNER.id), t: 0, i: "" })), "CURSOR_INVALID")
+  assert.equal(await refused(encodeBoundCursor({ ...BINDING, plugin: "another-plugin" }, { o: digestOf(OWNER.id), t: 0, i: "" })), "CURSOR_INVALID")
   assert.equal(await refused(encodeBoundCursor({ ...BINDING, source: "meetings" }, { o: digestOf(OWNER.id), t: 0, i: "" })), "CURSOR_INVALID")
   assert.equal(await refused(encodeBoundCursor(BINDING, { o: "not-a-digest", t: 0, i: "" })), "CURSOR_INVALID")
   assert.equal(await refused(encodeBoundCursor(BINDING, { o: digestOf(OWNER.id), t: "soon", i: "" })), "CURSOR_INVALID")
@@ -195,7 +204,7 @@ test("a cursor this source did not issue, from another format or another plugin,
 })
 
 test("an unknown source, a malformed input and a scope are refused", async () => {
-  assert.equal(await code(list()({ source: "granola" })), "SOURCE_UNKNOWN")
+  assert.equal(await code(list()({ source: "another-source" })), "SOURCE_UNKNOWN")
   assert.equal(await code(list()({ limit: 0 })), "INPUT_INVALID")
   assert.equal(await code(list()({ scope: { folders: ["x"] } })), "INPUT_INVALID")
 })

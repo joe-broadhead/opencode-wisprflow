@@ -19737,9 +19737,15 @@ function person(value) {
   if (!name && !email3) return void 0;
   return { ...name ? { name } : {}, ...email3 && /^[^\s@]+@[^\s@]+$/.test(email3) ? { email: email3 } : {} };
 }
+var PAGE_NEXT = "Read again with the same cursor; if it keeps failing, update the plugin.";
+function pageError(what) {
+  throw new SourceError({ code: "SCHEMA_VIOLATION", what: `${what}.`, next: PAGE_NEXT });
+}
 function readMeetingsPage(data) {
+  if (!record3(data) && !Array.isArray(data)) pageError("search_meetings did not answer a page");
   const page = record3(data) ? data : {};
-  const list2 = Array.isArray(data) ? data : ["meetings", "results", "items", "data"].map((key) => page[key]).find(Array.isArray) ?? [];
+  const list2 = Array.isArray(data) ? data : ["meetings", "results", "items", "data"].map((key) => page[key]).find(Array.isArray);
+  if (!Array.isArray(list2)) pageError("search_meetings answered no meetings list");
   const meetings = list2.flatMap((item2) => {
     if (!record3(item2)) return [];
     const id = text2(item2.id) ?? text2(item2.meeting_id);
@@ -19765,7 +19771,8 @@ function readMeetingsPage(data) {
   });
   const next = text2(page.next_cursor);
   const more = page.has_more === true;
-  return { meetings, ...more && next ? { next } : {}, more, truncated: page.truncated === true };
+  if (more && next === void 0) pageError("search_meetings said has_more without a next_cursor");
+  return { meetings, ...more && next !== void 0 ? { next } : {}, more, truncated: page.truncated === true };
 }
 var compare = (a, b) => a.t - b.t || (a.i < b.i ? -1 : a.i > b.i ? 1 : 0);
 var digest = (owner) => createHash5("sha256").update(owner.id).digest("hex").slice(0, 16);
@@ -19799,8 +19806,9 @@ async function searchWindow(search, from, to) {
     if (page >= MAX_PAGES) return split();
     const result = readMeetingsPage(await search({ ...filters, ...cursor === void 0 ? {} : { cursor } }));
     if (result.truncated) return split();
+    if (result.more && result.next === cursor) pageError("search_meetings repeated the cursor while has_more");
     found.push(...result.meetings.filter((meeting) => meeting.time >= from && meeting.time <= to));
-    if (!result.more || result.next === void 0 || result.next === cursor) return { meetings: found, holes: [] };
+    if (!result.more || result.next === void 0) return { meetings: found, holes: [] };
     cursor = result.next;
   }
 }
@@ -19927,8 +19935,8 @@ var CONTROL3 = new RegExp("\\p{Cc}", "gu");
 function snapshotInput(input) {
   if (input.source !== void 0 && input.source !== SOURCE) refuse2("SOURCE_UNKNOWN", "This plugin lists one source, wisprflow", 'Leave source out, or pass "wisprflow".');
   if (input.list !== void 0 && input.list !== "meetings") refuse2("INPUT_INVALID", "The list snapshot takes list: meetings, and nothing else", 'Pass list "meetings" with source "wisprflow".');
-  for (const key of ["cursor", "since", "limit"]) {
-    if (input[key] !== void 0) refuse2("INPUT_INVALID", `The meetings list does not take ${key}`, "Pass source and list only; read the events source for a cursor.");
+  for (const key of ["cursor", "since", "limit", "scope"]) {
+    if (input[key] !== void 0) refuse2("INPUT_INVALID", `The meetings list does not take ${key}`, "Pass source and list only; read the events source for a cursor or a scope.");
   }
 }
 async function meetingsList(search, account, input, now) {
@@ -19971,6 +19979,9 @@ async function ownerFor(host2, name) {
   }
   if (server.status.status === "needs_auth") {
     throw new SourceError({ code: "NEEDS_SIGN_IN", what: `the ${name} MCP server needs a sign-in`, next: SIGN_IN(name) });
+  }
+  if (server.status.status === "pending") {
+    throw new SourceError({ code: "UNAVAILABLE", what: `the ${name} MCP server is still connecting`, next: "Call again in a few seconds." });
   }
   if (server.status.status === "failed") {
     throw new SourceError({

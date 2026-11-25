@@ -280,15 +280,15 @@
     "events": {}
   },
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "bundle": "node scripts/bundle.mjs",
     "typecheck": "tsc -p tsconfig.json",
+    "lint": "biome check .",
     "test": "node --test \"test/unit/**/*.test.ts\" \"test/fixture.test.ts\"",
     "test:pack": "node --test \"test/pack/*.test.ts\"",
     "fixtures": "node scripts/record-fixture.mjs",
     "docs": "plugin-kit docs",
     "docs:check": "plugin-kit docs --check",
-    "check": "npm run lint && npm run typecheck && npm run build && npm test && npm run test:pack && plugin-kit check && plugin-kit docs --check",
-    "lint": "biome check ."
+    "check": "npm run lint && npm run typecheck && npm run bundle && npm test && npm run test:pack && plugin-kit check && plugin-kit docs --check"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.9",

@@ -91,8 +91,8 @@ interface Response {
 }
 
 test("the packed tarball installs and starts in OpenCode 2.4.1", { timeout: 300_000 }, async () => {
-  // A fresh build: the package has no prepare hook, so a stale dist/ must never be packed.
-  run(process.execPath, [join(root, "scripts", "build.mjs")], root)
+  // A fresh bundle: the package has no prepare or lifecycle hook, and a stale dist/ must never be packed.
+  run(process.execPath, [join(root, "scripts", "bundle.mjs")], root)
   const packed = run("npm", ["pack", "--ignore-scripts", "--pack-destination", work], root).trim().split("\n").at(-1)
   assert.ok(packed?.endsWith(".tgz"), `npm pack answered ${String(packed)}`)
   if (packed === undefined) throw new Error("npm pack answered no tarball name")

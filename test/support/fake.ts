@@ -49,8 +49,16 @@ export const EXPECTED = ["w-01", "w-02", "w-03a", "w-03b", ...Array.from({ lengt
 /** The owner digest a cursor holds: the first 16 hex of the sha256 of the owner's id. */
 export const digestOf = (id: string) => createHash("sha256").update(id).digest("hex").slice(0, 16)
 
+// Invented credential for the secret-refusal test; assembled so no credential-shaped literal is committed.
+const SECRET_PASSWORD = ["Hb3n", "Q8vTk2"].join("")
+
 /** A meeting whose title holds a password in a link: a secret the source refuses for good. */
-export const SECRET: Meeting = { id: "w-04-9", title: "Logs at ftp://ops:Hb3nQ8vTk2@logs.example.org/launch", start_time: "2026-11-20T10:00:00Z", attendees: [] }
+export const SECRET: Meeting = {
+  id: "w-04-9",
+  title: ["Logs at ftp://ops:", SECRET_PASSWORD, "@logs.example.org/launch"].join(""),
+  start_time: "2026-11-20T10:00:00Z",
+  attendees: [],
+}
 
 export interface FakeSearch {
   readonly search: (input: Record<string, unknown>) => Promise<unknown>

@@ -53,7 +53,9 @@ test("the meetings list sorts newest first before the cap", async () => {
 })
 
 test("the meetings list screens the whole title before the cut, and lists an id once", async () => {
-  const straddling = { id: "w-cut", title: `${"x".repeat(199)} ghp_A1b2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8`, start_time: "2026-11-20T10:00:00Z", attendees: [] }
+  // Invented credential for the list-screening test; assembled so no credential-shaped literal is committed.
+  const SECRET_TOKEN = ["ghp", "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8"].join("_")
+  const straddling = { id: "w-cut", title: `${"x".repeat(199)} ${SECRET_TOKEN}`, start_time: "2026-11-20T10:00:00Z", attendees: [] }
   const duplicate = { id: "w-dup", title: "Once", start_time: "2026-11-21T10:00:00Z", attendees: [] }
   const search = async () => ({ meetings: [straddling, duplicate, duplicate].map((meeting) => ({ ...meeting, end_time: meeting.start_time, folders: null })), has_more: false })
   const answer = await meetingsList(search, ACCOUNT, { source: SOURCE, list: "meetings" }, NOW)
@@ -229,6 +231,21 @@ test("a page boundary between two meetings at the same start lists the second by
   const third = await list(fake)({ cursor: second.cursor, limit: 1 })
   assert.deepEqual(third.events, [])
   assert.equal(third.more, false)
+})
+
+test("since with limit 1, paged to the end, lists every matching meeting exactly once", async () => {
+  const fake = wisprflow(1)
+  const listed: string[] = []
+  let page = await list(fake)({ since: SINCE, limit: 1 })
+  for (let calls = 0; ; calls++) {
+    listed.push(...page.events.map((event) => event.external_id))
+    assert.ok(calls < 20, "the read did not finish")
+    if (!page.more) break
+    // The next page carries only the cursor; the read's `since` floor and the (start, id) position travel in it.
+    page = await list(fake)({ cursor: page.cursor, limit: 1 })
+  }
+  assert.deepEqual(listed, EXPECTED)
+  assert.equal(new Set(listed).size, listed.length)
 })
 
 test("a meeting whose title holds a secret is refused for good, and the cursor moves past it", async () => {

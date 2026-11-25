@@ -1,7 +1,7 @@
 {
   "schema": "opencode-family/live-tools@1",
   "evidence": "live-observed",
-  "note": "Captured by scripts/capture-tools.mjs from the server's own tools/list. Descriptions are public tool metadata, recorded in full. No tool was called. No token, header, account id, server instructions or result text is recorded.",
+  "note": "Captured from the server's own tools/list on 2026-11-14 (OpenCode 2.2.6). The 16 names and descriptions are public tool metadata, recorded in full. No tool was called. No token, header, account id, server instructions or result text is recorded.",
   "listedAt": "2026-11-14",
   "server": "wisprflow",
   "namespace": "wisprflow",

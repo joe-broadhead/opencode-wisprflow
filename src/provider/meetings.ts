@@ -159,29 +159,28 @@ export function readMeetingsPage(data: unknown): MeetingsPage {
   const page = record(data) ? data : {}
   const list = Array.isArray(data) ? data : ["meetings", "results", "items", "data"].map((key) => page[key]).find(Array.isArray)
   if (!Array.isArray(list)) pageError("search_meetings answered no meetings list")
-  const meetings = list.flatMap((item): MeetingFacts[] => {
-    if (!record(item)) return []
+  const meetings: MeetingFacts[] = []
+  for (const item of list) {
+    if (!record(item)) pageError("search_meetings answered a meeting that is not an object")
     const id = text(item.id) ?? text(item.meeting_id)
     const time = timeOf(item)
-    if (!id || time === undefined) return []
+    if (!id || time === undefined) pageError("search_meetings answered a meeting without an id and start time")
     const attendees = (["attendees", "participants"].map((key) => item[key]).find(Array.isArray) ?? []) as unknown[]
     const url = text(item.share_link)
     const owner = person(item.owner)
     const summary = text(item.summary)
-    return [
-      {
-        id,
-        title: text(item.title) ?? text(item.name) ?? "",
-        time,
-        ...(url ? { url } : {}),
-        attendees: attendees.flatMap((attendee) => person(attendee) ?? []),
-        ...(owner ? { owner } : {}),
-        shared: item.shared === true || item.is_mine === false,
-        transcript: item.has_transcript === true,
-        ...(summary ? { summary } : {}),
-      },
-    ]
-  })
+    meetings.push({
+      id,
+      title: text(item.title) ?? text(item.name) ?? "",
+      time,
+      ...(url ? { url } : {}),
+      attendees: attendees.flatMap((attendee) => person(attendee) ?? []),
+      ...(owner ? { owner } : {}),
+      shared: item.shared === true || item.is_mine === false,
+      transcript: item.has_transcript === true,
+      ...(summary ? { summary } : {}),
+    })
+  }
   const next = text(page.next_cursor)
   const more = page.has_more === true
   if (more && next === undefined) pageError("search_meetings said has_more without a next_cursor")

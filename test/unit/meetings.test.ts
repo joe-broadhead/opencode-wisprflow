@@ -106,7 +106,6 @@ test("reads meetings, their attendees, owner, share_link and flags, and the curs
     more: true,
     truncated: false,
   })
-  assert.deepEqual(readMeetingsPage({ meetings: [{ id: "x", start_time: "Oct 1" }], has_more: false, next_cursor: "ignored" }), { meetings: [], more: false, truncated: false })
   const schemaError = (value: unknown) =>
     assert.throws(
       () => readMeetingsPage(value),
@@ -116,6 +115,9 @@ test("reads meetings, their attendees, owner, share_link and flags, and the curs
   schemaError({})
   schemaError({ meetings: [], has_more: true })
   schemaError({ meetings: "not a list" })
+  schemaError({ meetings: [{ id: "x", start_time: "Oct 1" }] })
+  schemaError({ meetings: [{ title: "no id" }] })
+  schemaError({ meetings: [null] })
 })
 
 test("a tool result's data is its structured output, or its text parsed as JSON", () => {

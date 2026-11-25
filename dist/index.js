@@ -19746,29 +19746,28 @@ function readMeetingsPage(data) {
   const page = record3(data) ? data : {};
   const list2 = Array.isArray(data) ? data : ["meetings", "results", "items", "data"].map((key) => page[key]).find(Array.isArray);
   if (!Array.isArray(list2)) pageError("search_meetings answered no meetings list");
-  const meetings = list2.flatMap((item2) => {
-    if (!record3(item2)) return [];
+  const meetings = [];
+  for (const item2 of list2) {
+    if (!record3(item2)) pageError("search_meetings answered a meeting that is not an object");
     const id = text2(item2.id) ?? text2(item2.meeting_id);
     const time3 = timeOf(item2);
-    if (!id || time3 === void 0) return [];
+    if (!id || time3 === void 0) pageError("search_meetings answered a meeting without an id and start time");
     const attendees = ["attendees", "participants"].map((key) => item2[key]).find(Array.isArray) ?? [];
     const url2 = text2(item2.share_link);
     const owner = person(item2.owner);
     const summary = text2(item2.summary);
-    return [
-      {
-        id,
-        title: text2(item2.title) ?? text2(item2.name) ?? "",
-        time: time3,
-        ...url2 ? { url: url2 } : {},
-        attendees: attendees.flatMap((attendee) => person(attendee) ?? []),
-        ...owner ? { owner } : {},
-        shared: item2.shared === true || item2.is_mine === false,
-        transcript: item2.has_transcript === true,
-        ...summary ? { summary } : {}
-      }
-    ];
-  });
+    meetings.push({
+      id,
+      title: text2(item2.title) ?? text2(item2.name) ?? "",
+      time: time3,
+      ...url2 ? { url: url2 } : {},
+      attendees: attendees.flatMap((attendee) => person(attendee) ?? []),
+      ...owner ? { owner } : {},
+      shared: item2.shared === true || item2.is_mine === false,
+      transcript: item2.has_transcript === true,
+      ...summary ? { summary } : {}
+    });
+  }
   const next = text2(page.next_cursor);
   const more = page.has_more === true;
   if (more && next === void 0) pageError("search_meetings said has_more without a next_cursor");
@@ -20274,7 +20273,7 @@ function readSkills(directory = SKILLS) {
     if (parsed.name === void 0 || parsed.name === "") throw invalid(file3, "has no frontmatter name");
     if (parsed.name !== name) throw invalid(file3, `names "${parsed.name}", not its directory "${name}"`);
     if (parsed.description === void 0 || parsed.description.trim() === "") throw invalid(file3, "has no frontmatter description");
-    if (parsed.description.trim() === ">" || parsed.description.trim() === "|" || parsed.description.trim() === ">-" || parsed.description.trim() === "|-") {
+    if (/^[>|][+-]?$/.test(parsed.description.trim())) {
       throw invalid(file3, `has the frontmatter description "${parsed.description.trim()}", which is only a block marker; indent the text below it`);
     }
     if (parsed.content === "") throw invalid(file3, "has no content below its frontmatter");

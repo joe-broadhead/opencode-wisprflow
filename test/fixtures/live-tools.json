@@ -1,16 +1,12 @@
 {
-  "schema": "opencode-family/live-tools@1",
+  "schema": "wisprflow/live-tools@1",
   "evidence": "live-observed",
-  "note": "Captured from the server's own tools/list on 2026-11-14 (OpenCode 2.2.6). The 16 names and descriptions are public tool metadata, recorded in full. No tool was called. No token, header, account id, server instructions or result text is recorded.",
+  "note": "Server metadata from the server's own tools/list, captured 2026-11-14. The 16 names and descriptions are host-independent. No tool was called. No token, header, account id, server instructions or result text is recorded.",
   "listedAt": "2026-11-14",
   "server": "wisprflow",
   "namespace": "wisprflow",
   "endpoint": "https://api.wisprflow.ai/connect/mcp",
   "auth": "signed-in",
-  "host": {
-    "opencode": "2.2.6",
-    "via": "running OpenCode server: MCP status and active credential; raw MCP tools/list"
-  },
   "protocol": {
     "version": "2025-06-18",
     "server": {

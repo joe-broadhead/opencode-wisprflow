@@ -4,7 +4,6 @@
 # standard (plugin standard §1).
 
 *                         @joe-broadhead
-
-/package.json             @joe-broadhead
-/AGENTS.md                @joe-broadhead
-/docs/                    @joe-broadhead
+/package.json             @joe-broadhead @we-the-rebel-alliance/contract-maintainers
+/AGENTS.md                @joe-broadhead @we-the-rebel-alliance/contract-maintainers
+/docs/                    @joe-broadhead @we-the-rebel-alliance/contract-maintainers

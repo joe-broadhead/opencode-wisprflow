@@ -1,17 +1,18 @@
 # Wispr Flow
 
-An unofficial OpenCode plugin for Wispr Flow. It reads the meetings Wispr Flow's Notetaker captured — each with its
-start, attendees, summary and share link — as normalised events for an app or an automation, and it passes the vendor's
-own MCP tools through for everything else: transcripts, summaries, Scratchpad notes, folders, calendar events and
-contact lookups.
+An OpenCode plugin for Wispr Flow. It reads the meetings Wispr Flow's Notetaker captured — each with its start,
+attendees, summary and share link — as normalised events for an app or an automation, and it passes the vendor's own MCP
+tools through for everything else: transcripts, summaries, Scratchpad notes, folders, calendar events and contact
+lookups.
 
 The plugin follows [plugin-contract](https://github.com/we-the-rebel-alliance/plugin-contract) v0. Wispr Flow's MCP
 server holds the credentials; the plugin stores none.
 
 ## Install
 
-Install from a release: `opencode plugin add github:we-the-rebel-alliance/wisprflow-plugin#v<version>`. The first
-release on plugin-contract is v0.0.0 (cut after this PR merges).
+```sh
+opencode plugin add github:we-the-rebel-alliance/wisprflow-plugin#v0.0.0
+```
 
 The plugin needs OpenCode `>=2.4.1 <2.5.0`. Tested on 2.4.1.
 
@@ -27,15 +28,22 @@ another's meetings.
    { "accounts": { "work": {}, "personal": {} } }
    ```
 
-2. Sign in to each server through OpenCode's MCP sign-in (or `opencode mcp auth wisprflow-work`).
+2. Sign in to each server through OpenCode's MCP sign-in, or `opencode mcp auth wisprflow-work`.
 
 3. Call `tools.wisprflow.probe` with `{ "account": "work" }` to see which sign-in the alias holds, then read events.
 
 An alias's owner is OpenCode's sign-in, never a Wispr Flow identity: the owner is always marked `"verified": false`.
 
-## Access
+## Options
 
-`access` is `all` (the default), `ask-changes` or `read-only`.
+The options are `access`, `accounts` and `allowUntestedHost`; [configuration](docs/configuration.md) has the full
+schema.
+
+- `access` is `all` (the default), `ask-changes` or `read-only`.
+- `accounts` is one profile per alias. The profile has no fields today; the alias names the MCP server and its sign-in.
+- `allowUntestedHost` starts the plugin outside `>=2.4.1 <2.5.0`; leave it `false`.
+
+## Access
 
 - `all` runs every read. Two pass-through tools ask anyway, because they return other people's contact data:
   `get_participant_contacts` and `get_meeting_participants_enriched`.
@@ -88,6 +96,23 @@ None.
 None.
 <!-- /generated:capabilities -->
 
+## Troubleshooting
+
+- **`NEEDS_SIGN_IN`.** Sign the alias's MCP server in through OpenCode (`/connect`, or `opencode mcp auth
+  wisprflow-<alias>`), then call `probe` to confirm the owner and read again.
+- **`status` says an account is not ready.** Call `tools.wisprflow.status`; it lists every alias with `ready`,
+  `needs_sign_in` or `error` and gives one next step. It reads no content and needs no account.
+- **`ACCOUNT_REQUIRED`.** The plugin serves several aliases; pass `account` with one of the aliases the error names.
+  **`ACCOUNT_UNKNOWN`** means the alias is not one the options declare.
+- **`CURSOR_INVALID`.** Start the source again without the cursor. A cursor belongs to one plugin, source and account;
+  never pass another account's cursor. **`ACCOUNT_MISMATCH`** means the cursor belongs to an older sign-in for the same
+  alias; start again with `since`.
+- **`SOURCE_UNKNOWN`.** This plugin has one events source, `wisprflow`; omit `source` or pass that name.
+- **`UNAVAILABLE`.** The vendor's MCP server is not connected or the tool failed. Read `status` for the exact next step;
+  an MCP server that stays missing usually needs a restart.
+- **A tool asks every time.** `get_participant_contacts` and `get_meeting_participants_enriched` are `ask` at every
+  access level because they return other people's contact data. The person answers the ask.
+
 ## Errors
 
 <!-- generated:errors -->
@@ -124,3 +149,6 @@ None.
 - [Automations](docs/automations.md)
 - [Architecture](docs/architecture.md)
 - [Security](docs/security.md)
+
+The contract, the plugin standard and the conformance kit live in
+[plugin-contract](https://github.com/we-the-rebel-alliance/plugin-contract).

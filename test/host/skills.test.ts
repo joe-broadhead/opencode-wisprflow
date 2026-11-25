@@ -3,7 +3,7 @@
 // the default access rules on every built-in agent, and the status method over RPC). Run by `npm run test:host`.
 import { ROOT } from "./isolate.ts"
 import assert from "node:assert/strict"
-import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs"
+import { mkdirSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { after, before, describe, test } from "node:test"
@@ -83,6 +83,11 @@ describe("the built bundle in the embedded OpenCode 2.4.1 host", () => {
   before(
     async () => {
       mkdirSync(work, { recursive: true })
+      // The project is an empty temp directory, never the repository: OpenCode discovers <project>/skills/ by itself,
+      // so a repo-root project would pass this test even with the plugin's registration removed.
+      assert.deepEqual(readdirSync(work), [], "the project directory is empty")
+      assert.equal(existsSync(join(work, "skills")), false, "the project has no skills/ to discover")
+      assert.equal(existsSync(join(ROOT, "skills")), false, "the temp git root has no skills/ either")
       const shipped = (await import(pathToFileURL(join(root, "dist", "index.js")).href)) as { default: Plugin.Plugin }
       assert.equal(shipped.default.id, "wisprflow", "the bundle exports the plugin")
       const probe = Plugin.define({ id: "wisprflow.host-test.probe", setup: (ctx) => void probes.set(ctx.location.directory, ctx) })

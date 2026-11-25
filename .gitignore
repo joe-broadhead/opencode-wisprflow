@@ -1,8 +1,4 @@
 node_modules/
-dist/
+release/
 *.tgz
-.env
-.env.*
-*.log
 .DS_Store
-/reports/

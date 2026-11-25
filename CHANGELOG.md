@@ -1,14 +1,16 @@
 # Changelog
 
-## 0.0.0 (unreleased)
+## 0.0.0 (2026-11-25)
 
-The first release in the new org, rebuilt for OpenCode 2.4.1.
-
-- The package is `@we-the-rebel-alliance/wisprflow-plugin`, version `0.0.0`, with the plugin's reads and skills. Its
-  full contract-based documentation and release arrive with plugin-contract v0.
-- OpenCode 2.4.1 only: `@opencode/*` devDependencies are `2.4.1`, the host range is `>=2.4.1 <2.5.0`, and 2.4.1 is
-  the only tested host. Older-host harness branches and test matrices are gone.
-- The Code Mode namespace line is within the 400-character budget, and the two skill descriptions within 300.
-- The source's owner is marked `verified: false`: Wispr Flow names no account, so the owner is OpenCode's sign-in.
-- Removed the legacy app guide, the legacy connection request, and the legacy cursor shape; only the current bound cursor
-  is accepted.
+- The first release on plugin-contract v0: `Plugin.define`, `assertHost` and one `register` call.
+- Several Wispr Flow accounts at once through the `mcp` mechanism, one server per alias (`wisprflow`,
+  `wisprflow-<alias>`), each with its own OAuth session. `probe` and `status` answer per alias; the owner is OpenCode's
+  sign-in, marked `verified: false`.
+- The `wisprflow.meetings` events source: Notetaker meetings, oldest first, with a cursor bound to the account, the
+  two-hour settle, the 30-day plan window, cap splitting, gaps, the late-meeting look-back and secret refusal.
+- The `wisprflow.meetings.list` snapshot: up to 50 recent meeting titles, newest first, never editable.
+- All 16 Wispr Flow MCP tools declared as `mcp:` pass-through methods; `get_participant_contacts` and
+  `get_meeting_participants_enriched` ask first because they return other people's contact data.
+- No write, no action and no bus event.
+- Docs, skills and `AGENTS.md` generated from the manifest where the contract renders them; conformance fixtures for two
+  accounts; Biome lint, a pack test and `plugin-kit check` in CI.

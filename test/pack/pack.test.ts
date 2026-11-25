@@ -1,6 +1,6 @@
 // The packed tarball, installed and started in the real OpenCode 2.4.1 host.
 //
-// `opencode plugin add` refuses a local path ("Plugin target must be an npm registry package or Git package specifier"),
+// `opencode plugin add` refuses a local path with exit 1 ("Plugin target must be an npm registry package or Git package specifier"),
 // so the test installs the tarball with npm into an isolated project and names the installed package in the project's
 // `opencode.json` `plugins` — the same package the release publishes and the same entry a consumer pins by tag. It then
 // starts `opencode serve` in an isolated home and offline environment, waits for the plugin to load, and calls the

@@ -56,6 +56,15 @@ test("a server that needs a sign-in is NEEDS_SIGN_IN, and its account is needs_s
   assert.equal((await provider.signal({ account: "personal" })).state, "ready")
 })
 
+test("a pending server is UNAVAILABLE, and status says error instead of ready", async () => {
+  const { provider } = providerFor(fakeHost({ status: { work: { status: "pending" } }, signedIn: ["work", "personal"] }))
+  assert.equal(await code(() => provider.owner({ account: "work" })), "UNAVAILABLE")
+  const signal = await provider.signal({ account: "work" })
+  assert.equal(signal.state, "error")
+  assert.match(String(signal.reason), /still connecting/i)
+  assert.equal((await provider.signal({ account: "personal" })).state, "ready")
+})
+
 test("a failed server is UNAVAILABLE with a redacted reason, and status says error", async () => {
   const { provider } = providerFor(fakeHost({ status: { work: { status: "failed", error: "the sign-in was refused at https://api.wisprflow.ai/callback?token=secret-value" } } }))
   const message = await provider

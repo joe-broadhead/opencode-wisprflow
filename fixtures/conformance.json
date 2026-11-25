@@ -1,7 +1,7 @@
 {
   "plugin": "@we-the-rebel-alliance/wisprflow-plugin",
   "accounts": {
-    "real": true,
+    "real": false,
     "aliases": [
       "work",
       "personal"
@@ -28,7 +28,7 @@
     "wisprflow.meetings": {
       "cases": [
         {
-          "name": "the work account's meetings",
+          "name": "<redacted:personal>",
           "input": {
             "source": "wisprflow",
             "account": "work",
@@ -54,13 +54,13 @@
                 "actors": [
                   {
                     "role": "attendee",
-                    "id": "mailto:ada@example.test",
-                    "name": "Ada Example"
+                    "id": "mailto:<redacted:email>",
+                    "name": "<redacted:personal>"
                   },
                   {
                     "role": "attendee",
                     "id": "name:Lin%20Sample",
-                    "name": "Lin Sample"
+                    "name": "<redacted:personal>"
                   }
                 ],
                 "title": "Kickoff",
@@ -69,7 +69,7 @@
                 "labels": [
                   "transcript"
                 ],
-                "hash": "sha256:87e3870ea51004174ac9b9dd37abf0eb265b67bcba7e25542ef90bf021f7e944"
+                "hash": "sha256:80309482da42ca4a2ad4cffd5da77352ca4187a6d6976e48a35a92f1d53c31e2"
               },
               {
                 "source": "wisprflow",
@@ -82,7 +82,7 @@
                   {
                     "role": "owner",
                     "id": "name:Bo%20Placeholder",
-                    "name": "Bo Placeholder"
+                    "name": "<redacted:personal>"
                   }
                 ],
                 "title": "Their notes",
@@ -91,7 +91,7 @@
                 "labels": [
                   "shared"
                 ],
-                "hash": "sha256:eb6efa4c3199cbf2ab0e714320856f99eaaa3774f35bd74f94e5e484f6715261"
+                "hash": "sha256:5643842c3e2058972ab975ab204fe26eaf6b304434e3ddbbedd936553c52e1aa"
               },
               {
                 "source": "wisprflow",
@@ -214,7 +214,7 @@
           }
         },
         {
-          "name": "the personal account's own meeting",
+          "name": "<redacted:personal>",
           "input": {
             "source": "wisprflow",
             "account": "personal",
@@ -241,14 +241,14 @@
                   {
                     "role": "attendee",
                     "id": "name:Rowan%20Vale",
-                    "name": "Rowan Vale"
+                    "name": "<redacted:personal>"
                   }
                 ],
                 "title": "Weekend",
                 "text": "",
                 "url": null,
                 "labels": [],
-                "hash": "sha256:b61f82ba0a6100005c407d0fa2c0ed85be63378ae8f34d19d533bb710a8113c6"
+                "hash": "sha256:2da44dfe48187ba486f13c4f9cba13c56c45d5775969418fb8381064f05bf9f7"
               }
             ],
             "cursor": "eyJ2IjoyLCJzIjoid2lzcHJmbG93IiwiYiI6IjJjMWE0ZjNiNzAwNzA1N2UiLCJvIjoiYjRlZDBiMWE5YjU3ODkwZiIsInQiOjE3OTM3MDcyMDAwMDAsImkiOiJwLTAxIiwiZiI6MTc5MzQ5MTIwMDAwMCwiciI6ImhhVFFYQVNaIn0",
@@ -259,7 +259,7 @@
           }
         },
         {
-          "name": "an empty window",
+          "name": "<redacted:personal>",
           "input": {
             "source": "wisprflow",
             "account": "work",
@@ -283,7 +283,7 @@
           }
         },
         {
-          "name": "another account's cursor is refused",
+          "name": "<redacted:personal>",
           "input": {
             "source": "wisprflow",
             "account": "personal",
@@ -293,7 +293,7 @@
           "refuses": "CURSOR_INVALID: The cursor was not issued for this source and account. Next step: Pass a cursor from a previous result for the same account, or start again with since."
         },
         {
-          "name": "an unknown source is refused",
+          "name": "<redacted:personal>",
           "input": {
             "source": "other",
             "account": "work"

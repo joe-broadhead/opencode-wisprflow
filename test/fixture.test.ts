@@ -70,7 +70,8 @@ test("every recorded page and refusal is what the handlers answer today", async 
     }
     const answer = await run(runtime, "events_list", input, account)
     assert.deepEqual(answer, item.answer, item.name)
-    const accepted = acceptAnswer(eventsSource!, account, answer)
+    assert.ok(eventsSource !== undefined)
+    const accepted = acceptAnswer(eventsSource, account, answer)
     if (!accepted.ok) throw new Error(`${item.name}: ${accepted.failure.message}`)
   }
 })
@@ -88,7 +89,8 @@ test("the recorded snapshot is what the list handler answers today", async () =>
   const { account, input } = withoutAccount(snapshot.input)
   const answer = await run(runtime, "events_list", input, account)
   assert.deepEqual(answer, snapshot.answer)
-  const accepted = acceptAnswer(listSource!, account, answer)
+  assert.ok(listSource !== undefined)
+  const accepted = acceptAnswer(listSource, account, answer)
   if (!accepted.ok) throw new Error(accepted.failure.message)
 })
 

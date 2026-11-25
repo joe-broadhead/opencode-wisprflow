@@ -131,7 +131,7 @@ const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-
 function timeOf(meeting: Record<string, unknown>): number | undefined {
   for (const key of ["start_time", "started_at", "start", "starts_at", "start_at"]) {
     const value = meeting[key]
-    const at = typeof value === "string" ? value.trim() : record(value) ? text(value["date_time"] ?? value["dateTime"]) : undefined
+    const at = typeof value === "string" ? value.trim() : record(value) ? text(value.date_time ?? value.dateTime) : undefined
     if (at && ISO_UTC.test(at)) {
       const time = Date.parse(at)
       if (Number.isFinite(time)) return time
@@ -143,8 +143,8 @@ function timeOf(meeting: Record<string, unknown>): number | undefined {
 function person(value: unknown): Attendee | undefined {
   if (typeof value === "string") return value.includes("@") ? { email: value.trim().toLowerCase() } : value.trim() ? { name: value.trim() } : undefined
   if (!record(value)) return undefined
-  const name = text(value["name"]) ?? text(value["display_name"])
-  const email = text(value["email"])?.toLowerCase()
+  const name = text(value.name) ?? text(value.display_name)
+  const email = text(value.email)?.toLowerCase()
   if (!name && !email) return undefined
   return { ...(name ? { name } : {}), ...(email && /^[^\s@]+@[^\s@]+$/.test(email) ? { email } : {}) }
 }
@@ -155,32 +155,36 @@ export function readMeetingsPage(data: unknown): MeetingsPage {
   const list = Array.isArray(data) ? data : (["meetings", "results", "items", "data"].map((key) => page[key]).find(Array.isArray) ?? [])
   const meetings = (list as unknown[]).flatMap((item): MeetingFacts[] => {
     if (!record(item)) return []
-    const id = text(item["id"]) ?? text(item["meeting_id"])
+    const id = text(item.id) ?? text(item.meeting_id)
     const time = timeOf(item)
     if (!id || time === undefined) return []
     const attendees = (["attendees", "participants"].map((key) => item[key]).find(Array.isArray) ?? []) as unknown[]
-    const url = text(item["share_link"])
-    const owner = person(item["owner"])
-    const summary = text(item["summary"])
+    const url = text(item.share_link)
+    const owner = person(item.owner)
+    const summary = text(item.summary)
     return [
       {
         id,
-        title: text(item["title"]) ?? text(item["name"]) ?? "",
+        title: text(item.title) ?? text(item.name) ?? "",
         time,
         ...(url ? { url } : {}),
         attendees: attendees.flatMap((attendee) => person(attendee) ?? []),
         ...(owner ? { owner } : {}),
-        shared: item["shared"] === true || item["is_mine"] === false,
-        transcript: item["has_transcript"] === true,
+        shared: item.shared === true || item.is_mine === false,
+        transcript: item.has_transcript === true,
         ...(summary ? { summary } : {}),
       },
     ]
   })
-  const next = text(page["next_cursor"])
-  const more = page["has_more"] === true
-  return { meetings, ...(more && next ? { next } : {}), more, truncated: page["truncated"] === true }
+  const next = text(page.next_cursor)
+  const more = page.has_more === true
+  return { meetings, ...(more && next ? { next } : {}), more, truncated: page.truncated === true }
 }
 
+/**
+ * A position in the source's total order: the meeting's start time, then its id. A cursor resumes strictly after the
+ * pair, so a page boundary between two meetings that share a start never skips the second, and never repeats the first.
+ */
 interface Key {
   readonly t: number
   readonly i: string
@@ -209,7 +213,7 @@ interface CursorState {
 function cursorState(account: string, cursor: string): CursorState {
   const decoded = decodeBoundCursor(binding(account), cursor)
   const state = decoded.ok ? decoded.state : undefined
-  const [t, i, o, f, r, g] = [state?.["t"], state?.["i"], state?.["o"], state?.["f"], state?.["r"], state?.["g"]]
+  const [t, i, o, f, r, g] = [state?.t, state?.i, state?.o, state?.f, state?.r, state?.g]
   const invalid = () => refuse("CURSOR_INVALID", "The cursor was not issued for this source and account", CURSOR_NEXT)
   if (typeof t !== "number" || !Number.isSafeInteger(t) || typeof i !== "string" || typeof o !== "string" || !/^[0-9a-f]{16}$/.test(o)) return invalid()
   if (g !== undefined && (typeof g !== "number" || !Number.isSafeInteger(g) || g > t + 1)) return invalid()
@@ -250,7 +254,10 @@ async function searchWindow(search: Search, from: number, to: number): Promise<{
   }
 }
 
-const actorID = (attendee: Attendee) => (attendee.email ? `mailto:${attendee.email}` : `name:${encodeURIComponent(attendee.name!.replace(/\s+/g, " "))}`)
+const actorID = (attendee: Attendee) => {
+  if (attendee.email) return `mailto:${attendee.email}`
+  return `name:${encodeURIComponent((attendee.name ?? "").replace(/\s+/g, " "))}`
+}
 
 function toEvent(meeting: MeetingFacts, account: string): SourceEvent {
   return makeEvent({
@@ -340,8 +347,9 @@ export async function listEvents(search: Search, owner: EventsOwner, account: st
   const index = new Map(chosen.map((meeting, position) => [meeting.id, position]))
   // The last meeting this page accounts for: every chosen one when the whole screened list fits, so a refused meeting
   // at the end is passed too; otherwise the last listed.
-  const last = fits === screened.events.length ? chosen.length - 1 : index.get(page[fits - 1]!.external_id)!
-  const refused = screened.refused.filter((entry) => index.get(entry.external_id)! <= last)
+  const lastListed = page[fits - 1]
+  const last = fits === screened.events.length ? chosen.length - 1 : lastListed === undefined ? -1 : (index.get(lastListed.external_id) ?? -1)
+  const refused = screened.refused.filter((entry) => (index.get(entry.external_id) ?? Number.POSITIVE_INFINITY) <= last)
   const lastMeeting = chosen[last]
   const more = ordered.length > last + 1 || scanned < end || stop !== undefined
   // The position only moves forward: a page of late meetings alone leaves it where it was. A page that stops short of a
@@ -370,7 +378,10 @@ export async function listEvents(search: Search, owner: EventsOwner, account: st
     }
   }
   const answered = gap ?? holeGap
-  return eventsListResult({ source: SOURCE, account, owner }, page, next!, more, {
+  if (next === undefined) {
+    throw new SourceError({ code: "UNAVAILABLE", what: "the page cursor could not be written", next: "Read again without the cursor." })
+  }
+  return eventsListResult({ source: SOURCE, account, owner }, page, next, more, {
     refused,
     plugin: packageName,
     asOf: new Date(now).toISOString(),
@@ -400,7 +411,8 @@ function lookBack(
     .filter((meeting) => meeting.time >= from && compare({ t: meeting.time, i: meeting.id }, position) <= 0 && !pending.has(meeting.id))
     .sort((a, b) => compare({ t: a.time, i: a.id }, { t: b.time, i: b.id }))
   if (covered.length > budget) {
-    from = budget === 0 ? covered[covered.length - 1]!.time + 1 : covered[covered.length - budget - 1]!.time + 1
+    const boundary = budget === 0 ? covered.at(-1) : covered[covered.length - budget - 1]
+    if (boundary !== undefined) from = boundary.time + 1
     // Never past a late meeting still waiting, such as one that shares a start with one just listed: its tag-mates stay.
     if (keepWaiting) from = Math.min(from, waitingFrom)
   }
@@ -411,7 +423,7 @@ function lookBack(
 /** The list registry holds 50 items. A list read returns no more. */
 const LIST_CAP = 50
 /** C0 and C1 control characters: JSON escapes each to six bytes, so a title holding many would blow `maxBytes`. */
-const CONTROL = /[\u0000-\u001F\u007F-\u009F]/g
+const CONTROL = /\p{Cc}/gu
 
 /** Meetings as the contract's `list` output: id and title. Not editable. A title that holds a secret is left out. */
 export interface MeetingsList {
@@ -424,8 +436,8 @@ export interface MeetingsList {
 
 /** The source and input a snapshot read must carry; anything else is a caller error. */
 function snapshotInput(input: Record<string, unknown>) {
-  if (input["source"] !== undefined && input["source"] !== SOURCE) refuse("SOURCE_UNKNOWN", "This plugin lists one source, wisprflow", 'Leave source out, or pass "wisprflow".')
-  if (input["list"] !== undefined && input["list"] !== "meetings") refuse("INPUT_INVALID", "The list snapshot takes list: meetings, and nothing else", 'Pass list "meetings" with source "wisprflow".')
+  if (input.source !== undefined && input.source !== SOURCE) refuse("SOURCE_UNKNOWN", "This plugin lists one source, wisprflow", 'Leave source out, or pass "wisprflow".')
+  if (input.list !== undefined && input.list !== "meetings") refuse("INPUT_INVALID", "The list snapshot takes list: meetings, and nothing else", 'Pass list "meetings" with source "wisprflow".')
   for (const key of ["cursor", "since", "limit"]) {
     if (input[key] !== undefined) refuse("INPUT_INVALID", `The meetings list does not take ${key}`, "Pass source and list only; read the events source for a cursor.")
   }

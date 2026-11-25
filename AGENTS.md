@@ -27,7 +27,8 @@ access rule are known. It writes nothing.
 | Command | Does |
 |---|---|
 | `npm ci --ignore-scripts` | installs the dev tooling only; there are no runtime dependencies |
-| `npm run check` | typecheck, build, the unit and fixture tests, the pack test, `plugin-kit check`, `plugin-kit docs --check` |
+| `npm run lint` | Biome's recommended rules over the repository |
+| `npm run check` | lint, typecheck, build, the unit and fixture tests, the pack test, `plugin-kit check`, `plugin-kit docs --check` |
 | `npx plugin-kit check` | the conformance gate: T0, T1, docs, forbidden patterns, no bundled kit |
 | `npm run docs` | regenerates the generated doc sections from the manifest |
 | `npm run fixtures` | rebuilds the synthetic provider's recorded conformance fixture |
@@ -49,6 +50,7 @@ test/pack/                the packed tarball installed and started in OpenCode 2
 fixtures/conformance.json the recorded answers the conformance kit replays
 skills/                   the agent guides
 docs/                     capabilities, configuration, accounts, automations, architecture, security
+biome.json                Biome's recommended lint rules; generated folders and the lockfile are excluded
 scripts/build.mjs         builds dist/index.js with esbuild
 scripts/record-fixture.mjs rebuilds the synthetic provider's recorded fixture
 ```

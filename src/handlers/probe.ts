@@ -21,7 +21,7 @@ export function probeHandler(runtime: HandlerRuntime): MethodHandler {
     },
     output: PROBE_SCHEMA,
     async run(input, call) {
-      const source = input["source"]
+      const source = input.source
       if (source !== undefined && source !== SOURCE) refuseSource(runtime.plugin, String(source))
       return runtime.provider.probe({ account: call.account })
     },

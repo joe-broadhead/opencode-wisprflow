@@ -50,7 +50,7 @@ const OUTPUT = { anyOf: [PAGE_SCHEMA, LIST_SCHEMA] } as const
 const INPUT_SCHEMA = {
   ...EVENTS_LIST_INPUT_SCHEMA,
   properties: {
-    ...(EVENTS_LIST_INPUT_SCHEMA["properties"] as Readonly<Record<string, unknown>>),
+    ...(EVENTS_LIST_INPUT_SCHEMA.properties as Readonly<Record<string, unknown>>),
     list: { type: "string", enum: ["meetings"], description: "Answer the meetings list snapshot instead of events: up to 50 meeting titles, newest first. Pass source wisprflow." },
   },
 }
@@ -63,11 +63,11 @@ export function eventsListHandler(runtime: HandlerRuntime): MethodHandler {
     input: INPUT_SCHEMA,
     output: OUTPUT,
     async run(input, call) {
-      if (input["list"] !== undefined) {
-        if (input["list"] !== "meetings") refuseInput(['list must be "meetings"'])
+      if (input.list !== undefined) {
+        if (input.list !== "meetings") refuseInput(['list must be "meetings"'])
         return runtime.provider.list({ account: call.account, input, now: runtime.clock(), call })
       }
-      const source = input["source"]
+      const source = input.source
       if (source !== undefined && source !== SOURCE) refuseSource(runtime.plugin, String(source))
       return runtime.provider.page({ account: call.account, input, now: runtime.clock(), call })
     },

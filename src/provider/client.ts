@@ -75,7 +75,7 @@ const SERVER_UP = "Restart OpenCode; if the server stays missing, read the plugi
 
 /** One non-empty line for an owner's label: control characters become spaces, and it is cut to the contract's 200. */
 function labelOf(value: string | undefined): string {
-  const clean = (value ?? "").replace(/[\u0000-\u001f\u007f-\u009f]+/g, " ").replace(/\s+/g, " ").trim()
+  const clean = (value ?? "").replace(/\p{Cc}+/gu, " ").replace(/\s+/g, " ").trim()
   return clean === "" ? "Wispr Flow sign-in" : clean.slice(0, 200)
 }
 

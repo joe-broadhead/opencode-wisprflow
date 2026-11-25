@@ -1,0 +1,2 @@
+test/support/fake.ts:secret invented test credential: a fake user:password link in a meeting title, proving a secret is refused
+test/unit/meetings.test.ts:secret invented test credential: a fake GitHub-token-shaped title, proving a list screens the whole title before the cut

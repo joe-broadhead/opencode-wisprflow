@@ -19,6 +19,7 @@ npm run check
 
 | Step | What it proves |
 |---|---|
+| `npm run lint` | Biome's recommended rules pass over the repository |
 | `npm run typecheck` | the sources and tests typecheck under strict settings |
 | `npm run build` | `dist/index.js` is built from `src/index.ts` with esbuild |
 | `npm test` | the unit tests and the fixture replay pass |

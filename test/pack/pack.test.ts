@@ -69,7 +69,7 @@ async function freePort(): Promise<number> {
 
 /** The OpenCode 2.4.1 binary: the one the environment names, the one on PATH, or the release installed here. */
 function opencodeBinary(): string {
-  const given = process.env["OPENCODE_BIN"]
+  const given = process.env.OPENCODE_BIN
   if (given) {
     assert.equal(run(given, ["--version"], work).trim(), `opencode v${VERSION}`, "OPENCODE_BIN must be the 2.4.1 release")
     return given
@@ -95,11 +95,12 @@ test("the packed tarball installs and starts in OpenCode 2.4.1", { timeout: 300_
   run(process.execPath, [join(root, "scripts", "build.mjs")], root)
   const packed = run("npm", ["pack", "--ignore-scripts", "--pack-destination", work], root).trim().split("\n").at(-1)
   assert.ok(packed?.endsWith(".tgz"), `npm pack answered ${String(packed)}`)
+  if (packed === undefined) throw new Error("npm pack answered no tarball name")
 
   const project = join(work, "project")
   mkdirSync(project)
   writeFileSync(join(project, "package.json"), JSON.stringify({ name: "wisprflow-pack-probe", private: true, type: "module" }))
-  run("npm", ["install", join(work, packed!), "@opencode/plugin@2.4.1", "--ignore-scripts", "--no-audit", "--no-fund"], project)
+  run("npm", ["install", join(work, packed), "@opencode/plugin@2.4.1", "--ignore-scripts", "--no-audit", "--no-fund"], project)
   const installed = join(project, "node_modules", "@we-the-rebel-alliance", "wisprflow-plugin")
   assert.deepEqual(
     run("node", ["-e", `import("@we-the-rebel-alliance/wisprflow-plugin/server").then((m) => console.log(m.default.id, typeof m.default.setup))`], project).trim(),
@@ -126,8 +127,12 @@ test("the packed tarball installs and starts in OpenCode 2.4.1", { timeout: 300_
   const port = await freePort()
   let log = ""
   const server = spawn(binary, ["serve", "--hostname", "127.0.0.1", "--port", String(port)], { cwd: project, env, stdio: ["ignore", "pipe", "pipe"] })
-  server.stdout.on("data", (chunk) => void (log += chunk))
-  server.stderr.on("data", (chunk) => void (log += chunk))
+  server.stdout.on("data", (chunk) => {
+    log += String(chunk)
+  })
+  server.stderr.on("data", (chunk) => {
+    log += String(chunk)
+  })
   const exited = new Promise((done) => server.once("exit", done))
   const authorization = `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`
   const request = async (method: string, path: string, body?: unknown): Promise<Response> => {
@@ -161,7 +166,7 @@ test("the packed tarball installs and starts in OpenCode 2.4.1", { timeout: 300_
   try {
     const plugin = await until("wisprflow is active", async () => {
       const { body } = await request("GET", "/api/plugin")
-      const data = (body["data"] ?? []) as { id: string; state?: { status?: string } }[]
+      const data = (body.data ?? []) as { id: string; state?: { status?: string } }[]
       const found = data.find((item) => item.id === "wisprflow")
       return found?.state?.status === "active" ? found : undefined
     })
@@ -169,25 +174,25 @@ test("the packed tarball installs and starts in OpenCode 2.4.1", { timeout: 300_
 
     const server_ = await until("the wisprflow MCP server is registered", async () => {
       const { body } = await request("GET", "/api/mcp")
-      const data = (body["data"] ?? []) as { name: string; status?: { status?: string } }[]
+      const data = (body.data ?? []) as { name: string; status?: { status?: string } }[]
       return data.find((item) => item.name === "wisprflow")
     })
     assert.equal(server_.name, "wisprflow")
 
     const created = await request("POST", "/api/session", { agent: "build" })
-    const sessionID = (created.body["id"] ?? (created.body["data"] as Record<string, unknown> | undefined)?.["id"]) as string | undefined
+    const sessionID = (created.body.id ?? (created.body.data as Record<string, unknown> | undefined)?.id) as string | undefined
     assert.ok(typeof sessionID === "string" && sessionID.length > 0, JSON.stringify(created.body))
 
     // The transport wraps the RPC method's input in `{ input }`; the method's own input carries the session and its input.
     const status = await request("POST", "/api/rpc/wisprflow/status", { input: { sessionID, input: {} } })
     assert.equal(status.ok, true, JSON.stringify(status.body))
-    const output = status.body["output"] as Record<string, unknown>
-    assert.equal(output["name"], "wisprflow")
-    assert.equal(output["version"], "0.0.0")
-    assert.deepEqual(output["host"], { version: VERSION, range: ">=2.4.1 <2.5.0", tested: [VERSION] })
-    assert.deepEqual((output["accounts"] as { alias: string }[]).map((account) => account.alias), ["default"])
-    assert.ok(["needs_sign_in", "error"].includes(String(output["state"])))
-    assert.ok(Array.isArray(output["unguardedAgents"]))
+    const output = status.body.output as Record<string, unknown>
+    assert.equal(output.name, "wisprflow")
+    assert.equal(output.version, "0.0.0")
+    assert.deepEqual(output.host, { version: VERSION, range: ">=2.4.1 <2.5.0", tested: [VERSION] })
+    assert.deepEqual((output.accounts as { alias: string }[]).map((account) => account.alias), ["default"])
+    assert.ok(["needs_sign_in", "error"].includes(String(output.state)))
+    assert.ok(Array.isArray(output.unguardedAgents))
   } finally {
     if (server.exitCode === null) {
       server.kill("SIGTERM")

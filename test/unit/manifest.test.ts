@@ -37,7 +37,7 @@ test("the methods table classifies all 19 callables, including every pass-throug
     .map(([name]) => name)
     .sort()
   assert.deepEqual(asking, ["mcp:get_meeting_participants_enriched", "mcp:get_participant_contacts"])
-  assert.equal(manifest.methods["events_list"]?.operations?.[0], "search_meetings")
+  assert.equal(manifest.methods.events_list?.operations?.[0], "search_meetings")
 })
 
 test("the two sources name the same method, service, cadence and size", () => {

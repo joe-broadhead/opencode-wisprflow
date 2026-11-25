@@ -3,7 +3,7 @@
 // module documents.
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { encodeBoundCursor } from "@we-the-rebel-alliance/plugin-contract/cursor"
+import { decodeBoundCursor, encodeBoundCursor } from "@we-the-rebel-alliance/plugin-contract/cursor"
 import { EVENT_LIMITS, resultProblems, SourceError, type EventsListResult, type EventsOwner } from "@we-the-rebel-alliance/plugin-contract/events"
 import { findSource } from "@we-the-rebel-alliance/plugin-contract/manifest"
 import { acceptAnswer } from "@we-the-rebel-alliance/plugin-contract/read"
@@ -28,7 +28,8 @@ const ACCOUNT = "work"
 
 /** Every page the tests answer is checked with the consumer's own call, not a copy of its rules. */
 function accepted(page: EventsListResult, account = ACCOUNT) {
-  const acceptedPage = acceptAnswer(SOURCE_ITEM!, account, page)
+  assert.ok(SOURCE_ITEM !== undefined)
+  const acceptedPage = acceptAnswer(SOURCE_ITEM, account, page)
   if (!acceptedPage.ok) throw new Error(acceptedPage.failure.message)
   return page
 }
@@ -119,8 +120,12 @@ test("each meeting is one event: attendees and a shared meeting's owner as actor
   assert.equal(page.refused, undefined)
   assert.equal(page.plugin, packageName)
   assert.equal(page.asOf, new Date(NOW).toISOString())
+  const first = page.events[0]
+  const second = page.events[1]
+  assert.ok(first !== undefined)
+  assert.ok(second !== undefined)
   assert.deepEqual(
-    (({ external_id, kind, occurred_at, thread, title, text, url, labels, actors }) => ({ external_id, kind, occurred_at, thread, title, text, url, labels, actors }))(page.events[0]!),
+    (({ external_id, kind, occurred_at, thread, title, text, url, labels, actors }) => ({ external_id, kind, occurred_at, thread, title, text, url, labels, actors }))(first),
     {
       external_id: "w-01",
       kind: "meeting",
@@ -136,7 +141,7 @@ test("each meeting is one event: attendees and a shared meeting's owner as actor
       ],
     },
   )
-  assert.deepEqual({ external_id: page.events[1]!.external_id, url: page.events[1]!.url, labels: page.events[1]!.labels, actors: page.events[1]!.actors }, {
+  assert.deepEqual({ external_id: second.external_id, url: second.url, labels: second.labels, actors: second.actors }, {
     external_id: "w-02",
     url: null,
     labels: ["shared"],
@@ -204,6 +209,28 @@ test("two sign-ins' overlapping listings stay apart: each page is its own owner'
   assert.equal(crossed, "CURSOR_INVALID")
 })
 
+test("a page boundary between two meetings at the same start lists the second by id, without a repeat", async () => {
+  const tie = Date.parse("2026-11-10T08:00:00Z")
+  const same = [
+    // The provider lists the larger id first; the plugin's page order is the total order, so tie-a is page one.
+    { id: "tie-b", title: "Tie B", start_time: new Date(tie).toISOString(), attendees: [] },
+    { id: "tie-a", title: "Tie A", start_time: new Date(tie).toISOString(), attendees: [] },
+  ]
+  const fake = wisprflow(1, same)
+  const first = await list(fake)({ since: "2026-11-10", limit: 1 })
+  assert.deepEqual(first.events.map((event) => event.external_id), ["tie-a"])
+  assert.equal(first.more, true)
+  // The cursor is the total order (start, id): it resumes strictly after tie-a's pair, not after its timestamp.
+  const decoded = decodeBoundCursor(BINDING, first.cursor)
+  assert.equal(decoded.ok, true)
+  if (decoded.ok) assert.deepEqual({ t: decoded.state.t, i: decoded.state.i }, { t: tie, i: "tie-a" })
+  const second = await list(fake)({ cursor: first.cursor, limit: 1 })
+  assert.deepEqual(second.events.map((event) => event.external_id), ["tie-b"])
+  const third = await list(fake)({ cursor: second.cursor, limit: 1 })
+  assert.deepEqual(third.events, [])
+  assert.equal(third.more, false)
+})
+
 test("a meeting whose title holds a secret is refused for good, and the cursor moves past it", async () => {
   const page = await list(wisprflow(2, [...MEETINGS, SECRET]))({ since: SINCE, limit: 500 })
   assert.deepEqual(page.refused, [{ external_id: SECRET.id, reason: "secret", detail: "holds a secret (connection string)" }])
@@ -240,8 +267,8 @@ test("a minute the provider still caps is answered as a gap once, and the cursor
   const second = await call({ cursor: first.cursor, limit: 10 })
   assert.equal(resultProblems(second, 10, MAX_BYTES).length, 0)
   assert.equal(second.gap?.reason, "window-truncated")
-  assert.ok(burst - Date.parse(second.gap!.since) >= 0)
-  assert.ok(burst - Date.parse(second.gap!.since) < 60_000)
+  assert.ok(burst - Date.parse(second.gap?.since) >= 0)
+  assert.ok(burst - Date.parse(second.gap?.since) < 60_000)
   assert.deepEqual(second.events.map((event) => event.external_id), ["after"])
   const third = await call({ cursor: second.cursor, limit: 10 })
   assert.equal(third.gap, undefined)

@@ -291,11 +291,13 @@
     "test": "node --test \"test/unit/**/*.test.ts\" \"test/fixture.test.ts\"",
     "test:pack": "node --test \"test/pack/*.test.ts\"",
     "fixtures": "node scripts/record-fixture.mjs",
-    "docs": "npx plugin-kit docs",
-    "docs:check": "npx plugin-kit docs --check",
-    "check": "npm run typecheck && npm run build && npm test && npm run test:pack && npx plugin-kit check && npx plugin-kit docs --check"
+    "docs": "plugin-kit docs",
+    "docs:check": "plugin-kit docs --check",
+    "check": "npm run lint && npm run typecheck && npm run build && npm test && npm run test:pack && plugin-kit check && plugin-kit docs --check",
+    "lint": "biome check ."
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.9",
     "@opencode/plugin": "2.4.1",
     "@opencode/sdk": "2.4.1",
     "@types/node": "24.19.2",

@@ -12875,10 +12875,13 @@ function fieldOf(frontmatter, key) {
   const body = [];
   for (const line of lines.slice(at + 1)) {
     if (line.trim() !== "" && !/^\s/.test(line)) break;
-    body.push(line.replace(/^\s{2}/, ""));
+    body.push(line);
   }
+  const indents = body.filter((line) => line.trim() !== "").map((line) => line.length - line.trimStart().length);
+  const indent = indents.length === 0 ? 0 : Math.min(...indents);
+  const dedented = body.map((line) => line.slice(Math.min(indent, line.length)));
   const folded = first.startsWith(">");
-  return unquote(folded ? body.map((line) => line.trim()).filter((line) => line !== "").join(" ") : body.join("\n").trim());
+  return unquote(folded ? dedented.map((line) => line.trim()).filter((line) => line !== "").join(" ") : dedented.join("\n").trim());
 }
 function parseSkill(name, path, text3) {
   const match = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(text3.replace(/\r\n/g, "\n"));
@@ -12887,6 +12890,7 @@ function parseSkill(name, path, text3) {
   if (fieldOf(frontmatter, "name") !== name) throw notLoaded(name, `must be named "${name}" in its frontmatter`);
   const description = fieldOf(frontmatter, "description");
   if (!description) throw notLoaded(name, "has no description");
+  if (/^[>|][+-]?\d*$/.test(description)) throw notLoaded(name, "has a block marker as its description");
   const content = match[2]?.trim() ?? "";
   if (!content) throw notLoaded(name, "has no content");
   return { id: Skill.ID.make(name), name: Skill.Name.make(name), description, path: Skill.Info.fields.path.make(path), content };

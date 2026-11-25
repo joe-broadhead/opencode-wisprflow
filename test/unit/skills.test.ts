@@ -44,6 +44,32 @@ test("a folded description is one line", () => {
   assert.equal(skill.content, "# Wispr Flow")
 })
 
+test("a literal description keeps its lines", () => {
+  const skill = parseSkill(
+    "wisprflow",
+    join(SKILLS_DIR, "wisprflow", "SKILL.md"),
+    "---\nname: wisprflow\ndescription: |\n  Read the meetings Wispr Flow captured.\n  Then summarise them.\n---\n\n# Wispr Flow\n",
+  )
+  assert.equal(skill.description, "Read the meetings Wispr Flow captured.\nThen summarise them.")
+  assert.equal(skill.content, "# Wispr Flow")
+})
+
+test("a block description indented by four spaces is dedented", () => {
+  const skill = parseSkill(
+    "wisprflow",
+    join(SKILLS_DIR, "wisprflow", "SKILL.md"),
+    "---\nname: wisprflow\ndescription: >\n    Read the meetings Wispr Flow captured.\n    Then summarise them.\n---\n\n# Wispr Flow\n",
+  )
+  assert.equal(skill.description, "Read the meetings Wispr Flow captured. Then summarise them.")
+})
+
+test("a quoted block marker is refused with OPTIONS_INVALID and a next step", () => {
+  assert.throws(
+    () => parseSkill("wisprflow", join(SKILLS_DIR, "wisprflow", "SKILL.md"), "---\nname: wisprflow\ndescription: '>'\n---\nBody.\n"),
+    (error: unknown) => refused(error) && error.message.includes("block marker"),
+  )
+})
+
 test("a name that is not the folder is refused with OPTIONS_INVALID and a next step", () => {
   assert.throws(
     () => parseSkill("wisprflow", join(SKILLS_DIR, "wisprflow", "SKILL.md"), "---\nname: other\ndescription: A skill.\n---\nBody.\n"),

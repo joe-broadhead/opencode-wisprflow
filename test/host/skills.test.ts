@@ -7,6 +7,7 @@ import { mkdirSync, existsSync, readdirSync, readFileSync, rmSync } from "node:f
 import { join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { after, before, describe, test } from "node:test"
+import { parse } from "yaml"
 import { OpenCode } from "@opencode/sdk"
 import type { OpenCodeClient } from "@opencode/client"
 import { Plugin } from "@opencode/plugin"
@@ -26,19 +27,25 @@ const READY_TIMEOUT_MS = 120_000
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** The skills the package ships, read from the files rather than from the plugin's own loader. */
-function expectedSkills() {
+function expectedSkills(): { name: string; description: string }[] {
   const directory = join(root, "skills")
   const found = readdirSync(directory, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort()
   assert.ok(found.length > 0, "the package ships at least one skills/<name>/SKILL.md")
-  for (const name of found) {
+  return found.map((name) => {
     const text = readFileSync(join(directory, name, "SKILL.md"), "utf8")
-    assert.match(text, new RegExp(`^---\\n(?:.*\\n)?name: ${name}$`, "m"), `skills/${name}/SKILL.md names itself ${name}`)
-    assert.match(text, /^description: /m, `skills/${name}/SKILL.md has a description`)
-  }
-  return found
+    const front = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(text)?.[1]
+    assert.ok(front !== undefined, `skills/${name}/SKILL.md has front matter`)
+    const fields = parse(front) as { name?: unknown; description?: unknown }
+    assert.equal(fields.name, name, `skills/${name}/SKILL.md names itself ${name}`)
+    assert.equal(typeof fields.description, "string", `skills/${name}/SKILL.md has a description`)
+    const description = (fields.description as string).trim()
+    assert.notEqual(description, "", `skills/${name}/SKILL.md has a non-empty description`)
+    assert.doesNotMatch(description, /^[>|][+-]?\d*$/, `skills/${name}/SKILL.md has a real description, not a block marker`)
+    return { name, description }
+  })
 }
 
 async function until<T>(what: string, check: () => Promise<T | undefined | false>, timeoutMs = READY_TIMEOUT_MS): Promise<T> {
@@ -136,15 +143,19 @@ describe("the built bundle in the embedded OpenCode 2.4.1 host", () => {
     const expected = expectedSkills()
     const { data } = await client.skill.list({ location })
     const listed = new Map(data.map((skill) => [skill.id, skill]))
-    for (const name of expected) {
+    for (const expectedSkill of expected) {
+      const { name, description } = expectedSkill
       const skill = listed.get(name)
       assert.ok(skill, `skills/${name}/SKILL.md is registered as ${name}; the host lists ${[...listed.keys()].join(", ") || "nothing"}`)
       assert.equal(skill.name, name)
-      assert.ok(skill.description !== undefined && skill.description.length > 0, `${name} keeps its description`)
+      assert.equal(skill.description, description, `${name} keeps the description its SKILL.md declares`)
+      assert.notEqual(skill.description.trim(), "", `${name} has a non-empty description`)
+      assert.doesNotMatch(skill.description, /^[>|][+-]?\d*$/, `${name} has a real description, not a block marker`)
       assert.ok(skill.content.length > 0, `${name} keeps its content`)
       assert.ok(skill.path.endsWith(`/skills/${name}/SKILL.md`), `${name} keeps its file, not another skill's: ${skill.path}`)
     }
-    assert.deepEqual([...listed.keys()].filter((id) => expected.includes(id)).sort(), expected)
+    const expectedNames = expected.map((skill) => skill.name)
+    assert.deepEqual([...listed.keys()].filter((id) => expectedNames.includes(id)).sort(), expectedNames)
   })
 
   test("the plugin tools and the default access rules are on every built-in agent", { timeout: 30_000 }, async () => {

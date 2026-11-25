@@ -12130,8 +12130,8 @@ async function invoke(context, environment, level, entry, wiring, raw, rpc, fres
         prepared = prepareCall(entry, input, environment.accounts, environment.plans);
         const checked2 = await verify(environment, wiring, raw, entry, prepared.account);
         if (!checked2.ok) {
-          const failure3 = entry.item.commits !== void 0 && checked2.code === "GRANT_ACCOUNT_MISMATCH" ? refusal("ACCOUNT_MISMATCH", "the grant names another account than the plan", "Issue the grant for the account the plan was made for.") : checked2.refusal;
-          throw new RegisterError(failure3);
+          const failure4 = entry.item.commits !== void 0 && checked2.code === "GRANT_ACCOUNT_MISMATCH" ? refusal("ACCOUNT_MISMATCH", "the grant names another account than the plan", "Issue the grant for the account the plan was made for.") : checked2.refusal;
+          throw new RegisterError(failure4);
         }
         if (callEffect(environment.name, entry, prepared.account, resolved.rules) === "deny") {
           throw new RegisterError(refusal("PERMISSION_DENIED", `${environment.name}.${entry.name} is denied for this session's agent`, "Use a session whose agent allows it."));
@@ -12170,8 +12170,8 @@ async function invoke(context, environment, level, entry, wiring, raw, rpc, fres
   } catch (error2) {
     if (prepared?.reservation !== void 0) environment.plans.release(prepared.reservation);
     const own2 = refusalOf(error2);
-    const failure3 = own2 ?? refusal("UNAVAILABLE", "the RPC call failed", "Try again; if it keeps failing, check the plugin's status.");
-    return rpc.error("failed", failure3.message, { code: failure3.code, next: failure3.next });
+    const failure4 = own2 ?? refusal("UNAVAILABLE", "the RPC call failed", "Try again; if it keeps failing, check the plugin's status.");
+    return rpc.error("failed", failure4.message, { code: failure4.code, next: failure4.next });
   }
 }
 async function installRpc(context, environment, level, wiring, bus) {
@@ -12805,10 +12805,10 @@ function statusHandler(runtime) {
       const perAlias = await Promise.all(runtime.accounts.map(async (account) => [account.alias, await runtime.provider.signal({ account: account.alias })]));
       for (const [alias, signal] of perAlias) signals[alias] = signal;
       const problems = [...runtime.accountProblems];
-      const failure3 = perAlias.find(([, signal]) => signal.state === "error");
-      if (failure3 !== void 0) {
-        const reason = failure3[1].reason === void 0 ? "no reason given" : redactReason(failure3[1].reason);
-        problems.push(`the ${failure3[0]} account is in error: ${reason}`);
+      const failure4 = perAlias.find(([, signal]) => signal.state === "error");
+      if (failure4 !== void 0) {
+        const reason = failure4[1].reason === void 0 ? "no reason given" : redactReason(failure4[1].reason);
+        problems.push(`the ${failure4[0]} account is in error: ${reason}`);
       }
       return statusAnswer({
         manifest: runtime.manifest,
@@ -12845,6 +12845,77 @@ var packageName = file2.name;
 var version2 = file2.version;
 var manifest = checked.value;
 
+// src/skills.ts
+import { readFile, readdir } from "node:fs/promises";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { Skill } from "@opencode/plugin";
+var SKILLS_DIR = fileURLToPath(new URL("../skills/", import.meta.url));
+var failure3 = (problem) => new Error(`OPTIONS_INVALID: ${problem} Next step: reinstall the plugin from its release.`);
+var notLoaded = (name, problem) => failure3(`The "${name}" skill was not loaded: skills/${name}/SKILL.md ${problem}.`);
+var BLOCK = /* @__PURE__ */ new Set(["|", ">", "|-", ">-", "|+", ">+"]);
+var unquote = (value) => {
+  const trimmed = value.trim();
+  return trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'") ? trimmed.slice(1, -1) : trimmed;
+};
+function fieldOf(frontmatter, key) {
+  const lines = frontmatter.split("\n");
+  const at = lines.findIndex((line) => new RegExp(`^${key}\\s*:`).test(line));
+  if (at < 0) return void 0;
+  const first = (lines[at] ?? "").replace(new RegExp(`^${key}\\s*:\\s*`), "").trim();
+  if (first !== "" && !BLOCK.has(first)) {
+    const parts = [unquote(first)];
+    for (const line of lines.slice(at + 1)) {
+      if (line.trim() === "") continue;
+      if (!/^\s/.test(line)) break;
+      parts.push(line.trim());
+    }
+    return parts.join(" ");
+  }
+  const body = [];
+  for (const line of lines.slice(at + 1)) {
+    if (line.trim() !== "" && !/^\s/.test(line)) break;
+    body.push(line.replace(/^\s{2}/, ""));
+  }
+  const folded = first.startsWith(">");
+  return unquote(folded ? body.map((line) => line.trim()).filter((line) => line !== "").join(" ") : body.join("\n").trim());
+}
+function parseSkill(name, path, text3) {
+  const match = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(text3.replace(/\r\n/g, "\n"));
+  if (!match) throw notLoaded(name, "has no frontmatter");
+  const frontmatter = match[1] ?? "";
+  if (fieldOf(frontmatter, "name") !== name) throw notLoaded(name, `must be named "${name}" in its frontmatter`);
+  const description = fieldOf(frontmatter, "description");
+  if (!description) throw notLoaded(name, "has no description");
+  const content = match[2]?.trim() ?? "";
+  if (!content) throw notLoaded(name, "has no content");
+  return { id: Skill.ID.make(name), name: Skill.Name.make(name), description, path: Skill.Info.fields.path.make(path), content };
+}
+async function loadSkills(directory = SKILLS_DIR) {
+  const entries = await readdir(directory, { withFileTypes: true }).catch((error2) => {
+    const code = error2.code;
+    throw failure3(`The plugin's skills folder cannot be read (${typeof code === "string" ? code : String(error2)}).`);
+  });
+  const skills = [];
+  for (const name of entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort()) {
+    const path = join(directory, name, "SKILL.md");
+    let text3;
+    try {
+      text3 = await readFile(path, "utf8");
+    } catch (error2) {
+      const code = error2.code;
+      throw notLoaded(name, code === "ENOENT" ? "is missing" : `cannot be read (${typeof code === "string" ? code : String(error2)})`);
+    }
+    skills.push(parseSkill(name, path, text3));
+  }
+  return skills;
+}
+function registerSkills(skill, skills) {
+  return skill.transform((editor) => {
+    for (const info of skills) editor.add(info);
+  });
+}
+
 // src/index.ts
 var src_default = Plugin.define({
   id: manifest.plugin.name,
@@ -12853,6 +12924,7 @@ var src_default = Plugin.define({
     const options = context.options ?? {};
     const plan = accountsOf(manifest, options);
     if (!plan.ok) throw new Error(`OPTIONS_INVALID: ${plan.problems.join("; ")}. Next step: fix the plugin's accounts option.`);
+    const skills = await loadSkills();
     const accountRegistration = await registerMcpAccounts(context, manifest, options);
     const host2 = {
       tools: async () => await context.tool.list(),
@@ -12871,7 +12943,11 @@ var src_default = Plugin.define({
       clock: Date.now
     });
     const registration = await register(context, manifest, handlers);
-    return () => registration.dispose();
+    const skillRegistration = await registerSkills(context.skill, skills);
+    return async () => {
+      await skillRegistration.dispose();
+      await registration.dispose();
+    };
   }
 });
 export {

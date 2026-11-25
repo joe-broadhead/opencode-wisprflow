@@ -4,8 +4,9 @@
 
 | Layer | Files | Does |
 |---|---|---|
-| Entry | `src/index.ts` | `Plugin.define({ id, setup })`, `assertHost`, the account wiring and one `register` call |
+| Entry | `src/index.ts` | `Plugin.define({ id, setup })`, `assertHost`, the account wiring, the skills and one `register` call |
 | Accounts | `src/accounts.ts` | one Wispr Flow MCP server per alias, through the contract's `accounts` module |
+| Skills | `src/skills.ts` | reads `skills/<name>/SKILL.md`, checks the frontmatter and registers each one with `ctx.skill` |
 | Manifest | `src/manifest.ts` | reads `package.json` `capabilities` and checks it with the contract's validator |
 | Handlers | `src/handlers/` | one handler per method: the input, the answer schema, the description and the work |
 | Provider client | `src/provider/client.ts` | the one vendor URL, the alias's server and tool, the sign-in, the error mapping |
@@ -14,7 +15,8 @@
 The entry is deliberately thin. `register` from the contract wires doors 1–3: one agent tool per method in the
 `wisprflow` namespace, the same tools in Code Mode, one RPC registration under `wisprflow`, the permission assertions on
 `<alias>:<operation>`, and the access rules inserted into every agent. This repository never calls `ctx.tool`,
-`ctx.rpc` or `ctx.permission` itself.
+`ctx.rpc` or `ctx.permission` itself. Skills are the exception the contract does not cover: `src/skills.ts` adds them
+through `ctx.skill.transform`, because OpenCode loads a plugin's skills only if the plugin registers them.
 
 ## The call path
 
@@ -23,9 +25,12 @@ The entry is deliberately thin. `register` from the contract wires doors 1–3: 
 3. `src/accounts.ts` adds one MCP server per alias through `ctx.mcp.transform`, named `wisprflow` or
    `wisprflow-<alias>`. All aliases point at the same vendor URL; OpenCode keys OAuth by server name, so each alias is
    its own session.
-4. `register` checks the handler table against `capabilities.methods`, resolves the accounts from the options, generates
+4. `src/skills.ts` reads every `skills/<name>/SKILL.md` before the synchronous transform. A frontmatter name that is
+   not the folder, a missing description or an empty body is `OPTIONS_INVALID` and stops setup; the parsed skills are
+   registered with `ctx.skill.transform` after `register`.
+5. `register` checks the handler table against `capabilities.methods`, resolves the accounts from the options, generates
    the access rules into every agent, and registers the tools and the single RPC id.
-5. A call resolves the account, validates the input against the handler's schema, asserts the method's operations, runs
+6. A call resolves the account, validates the input against the handler's schema, asserts the method's operations, runs
    the handler, checks the answer and maps a failure to the contract's error table.
 
 ## The provider
@@ -58,6 +63,7 @@ cursor carries short tags of what it already accounted for there.
 | `Plugin.define` | `src/index.ts` |
 | `ctx.app.version` | `src/index.ts`, for the host gate and status |
 | `ctx.mcp.transform` | `src/accounts.ts` |
+| `ctx.skill.transform` | `src/skills.ts` |
 | `ctx.mcp.list`, `ctx.integration.connection.active`, `ctx.tool.list` | the provider client, reads only |
 | `ctx.agent.transform` | `register`'s access rules |
 | `ctx.tool.transform`, `ctx.rpc.register`, `ctx.permission.assert` | `register` only |

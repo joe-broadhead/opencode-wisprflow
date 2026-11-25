@@ -1,0 +1,27 @@
+// Imported first, before anything loads OpenCode. OpenCode derives its global paths from the environment, so the whole
+// environment is replaced: HOME, OPENCODE_TEST_HOME, XDG_* and TMPDIR point into a fresh temp root, nothing else is
+// inherited (no parent OpenCode, provider key or proxy), and the working directory moves there too. The root is a git
+// repository under the system's /tmp, never under TMPDIR or HOME: OpenCode looks for `.opencode` folders and project
+// config upwards from a location and stops at the repository's root, so it never finds the skills of whoever runs the
+// test.
+import { spawnSync } from "node:child_process"
+import { mkdirSync, mkdtempSync, realpathSync } from "node:fs"
+import { join } from "node:path"
+
+export const ROOT = realpathSync(mkdtempSync(join(realpathSync("/tmp"), "wisprflow-skills-host-")))
+const init = spawnSync("git", ["init", "--quiet", ROOT], { encoding: "utf8" })
+if (init.status !== 0) throw new Error(`git init ${ROOT} failed: ${init.stderr}`)
+const home = join(ROOT, "home")
+const KEEP = ["PATH", "LANG", "TZ", "TERM"]
+for (const key of Object.keys(process.env)) if (!KEEP.includes(key)) delete process.env[key]
+Object.assign(process.env, {
+  HOME: home,
+  OPENCODE_TEST_HOME: home,
+  XDG_CONFIG_HOME: join(home, ".config"),
+  XDG_DATA_HOME: join(home, ".local", "share"),
+  XDG_CACHE_HOME: join(home, ".cache"),
+  XDG_STATE_HOME: join(home, ".local", "state"),
+  TMPDIR: join(ROOT, "tmp"),
+})
+for (const dir of [home, join(ROOT, "tmp")]) mkdirSync(dir, { recursive: true })
+process.chdir(home)

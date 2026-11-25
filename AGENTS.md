@@ -29,7 +29,8 @@ access rule are known. It writes nothing.
 | `npm ci --ignore-scripts` | installs the dev tooling only; there are no runtime dependencies |
 | `npm run lint` | Biome's recommended rules over the repository |
 | `npm run bundle` | rebuilds the committed `dist/index.js` with esbuild |
-| `npm run check` | lint, typecheck, bundle, the unit and fixture tests, the pack test, `plugin-kit check`, `plugin-kit docs --check` |
+| `npm run check` | lint, typecheck, bundle, the unit, host and fixture tests, the pack test, `plugin-kit check`, `plugin-kit docs --check` |
+| `npm run test:host` | rebuilds `dist/index.js` and runs the host tests in the embedded OpenCode 2.4.1 host |
 | `npx plugin-kit check` | the conformance gate: T0, T1, docs, forbidden patterns, no bundled kit |
 | `npm run docs` | regenerates the generated doc sections from the manifest |
 | `npm run fixtures` | rebuilds the synthetic provider's recorded conformance fixture |
@@ -39,13 +40,15 @@ access rule are known. It writes nothing.
 ## Layout
 
 ```
-src/index.ts              Plugin.define({ id, setup }), assertHost, the accounts and one register call
+src/index.ts              Plugin.define({ id, setup }), assertHost, the accounts, the skills and one register call
 src/accounts.ts           the mcp mechanism: one server per alias, through the contract's accounts module
+src/skills.ts             reads skills/<name>/SKILL.md and registers them with ctx.skill at setup
 src/handlers/             one file per method: status, probe, events_list (page and list snapshot)
 src/provider/client.ts    the vendor's MCP server, its tools and the sign-in per alias; the one URL lives here
 src/provider/meetings.ts  the meetings page, cursor, windows and screening
 src/manifest.ts           reads package.json capabilities and checks it with the contract
-test/unit/                handlers, provider, accounts, manifest, host gate and the meetings page
+test/unit/                handlers, provider, accounts, manifest, host gate, skills and the meetings page
+test/host/                the built bundle in the embedded OpenCode 2.4.1 host: every skill is registered
 test/fixture.test.ts      replays fixtures/conformance.json through the handlers
 test/pack/                the packed tarball installed and started in OpenCode 2.4.1
 fixtures/conformance.json the recorded answers the conformance kit replays
@@ -80,6 +83,10 @@ scripts/record-fixture.mjs rebuilds the synthetic provider's recorded fixture
 
 - **Gate the host first.** `assertHost(ctx, manifest)` runs before anything is registered, so an untested release leaves
   no half-wired plugin behind.
+- **Register the skills yourself.** `register` wires the doors, the accounts and the access rules, not skills. `setup`
+  reads every `skills/<name>/SKILL.md` before the synchronous transform and calls `ctx.skill.transform`; a file whose
+  frontmatter name is not its folder, or that has no description or content, fails setup with `OPTIONS_INVALID` and a
+  next step.
 - **Emit through `call.bus`.** `register` builds the typed writer from its one RPC registration and gives every handler
   call `call.bus`. Never call `ctx.rpc.register` a second time. This plugin declares `events: {}` because it writes
   nothing and receives no webhook; do not add a bus event without an honest trigger.
@@ -99,6 +106,9 @@ scripts/record-fixture.mjs rebuilds the synthetic provider's recorded fixture
 - `test/unit/handlers.test.ts` drives the handler table and checks every page and snapshot with the contract's own
   consumer check.
 - `test/unit/manifest.test.ts` proves all 19 methods, the two sources, the effects and the handler table.
+- `test/unit/skills.test.ts` proves the frontmatter checks and that a broken file fails with `OPTIONS_INVALID`.
+- `test/host/skills.test.ts` loads the built bundle in the embedded OpenCode 2.4.1 host and proves every shipped skill id
+  is registered.
 - `test/fixture.test.ts` replays `fixtures/conformance.json`; `npm run fixtures` rebuilds it from the synthetic provider.
 - `test/pack/pack.test.ts` installs the packed tarball and starts OpenCode 2.4.1 with it.
 

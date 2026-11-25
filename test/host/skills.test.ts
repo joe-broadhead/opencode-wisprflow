@@ -41,9 +41,9 @@ function expectedSkills(): { name: string; description: string }[] {
     const fields = parse(front) as { name?: unknown; description?: unknown }
     assert.equal(fields.name, name, `skills/${name}/SKILL.md names itself ${name}`)
     assert.equal(typeof fields.description, "string", `skills/${name}/SKILL.md has a description`)
-    const description = (fields.description as string).trim()
-    assert.notEqual(description, "", `skills/${name}/SKILL.md has a non-empty description`)
-    assert.doesNotMatch(description, /^[>|][+-]?\d*$/, `skills/${name}/SKILL.md has a real description, not a block marker`)
+    const description = fields.description as string
+    assert.notEqual(description.trim(), "", `skills/${name}/SKILL.md has a non-empty description`)
+    assert.doesNotMatch(description.trim(), /^[>|][+-]?\d*$/, `skills/${name}/SKILL.md has a real description, not a block marker`)
     return { name, description }
   })
 }

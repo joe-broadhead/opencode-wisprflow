@@ -25,9 +25,9 @@ through `ctx.skill.transform`, because OpenCode loads a plugin's skills only if 
 3. `src/accounts.ts` adds one MCP server per alias through `ctx.mcp.transform`, named `wisprflow` or
    `wisprflow-<alias>`. All aliases point at the same vendor URL; OpenCode keys OAuth by server name, so each alias is
    its own session.
-4. `src/skills.ts` reads every `skills/<name>/SKILL.md` before the synchronous transform. A frontmatter name that is
-   not the folder, a missing description or an empty body is `OPTIONS_INVALID` and stops setup; the parsed skills are
-   registered with `ctx.skill.transform` after `register`.
+4. `src/skills.ts` parses every `skills/<name>/SKILL.md` as YAML before the synchronous transform. Invalid YAML, a
+   frontmatter name that is not the folder, a missing description or an empty body is `SCHEMA_VIOLATION` and stops
+   setup; `registerSkills` adds the parsed skills through `ctx.skill.transform` after `register`.
 5. `register` checks the handler table against `capabilities.methods`, resolves the accounts from the options, generates
    the access rules into every agent, and registers the tools and the single RPC id.
 6. A call resolves the account, validates the input against the handler's schema, asserts the method's operations, runs

@@ -64,14 +64,16 @@ test("registers one MCP server per account on the real host", { timeout: 180_000
       log: { level: "error", emit: () => {} },
     })) as unknown as Client
 
+    const running = client
+    assert.ok(running !== undefined)
     await until("the plugin is active", async () => {
-      const { data } = await client!.plugin.list({ location })
+      const { data } = await running.plugin.list({ location })
       const entry = data.find((item) => item.id === "wisprflow")
       if (entry?.state?.status === "failed") throw new Error(`the wisprflow plugin failed: ${entry.state.error ?? "no reason"}`)
       return entry?.state?.status === "active"
     })
 
-    const servers = (await client.mcp.list({ location })).data.map((entry) => entry.name).sort()
+    const servers = (await running.mcp.list({ location })).data.map((entry) => entry.name).sort()
     assert.deepEqual(servers, ["wisprflow", "wisprflow-work"])
   } finally {
     await client?.close().catch(() => undefined)

@@ -14,7 +14,7 @@
 - No write, no action and no bus event.
 - The two skills (`wisprflow`, `wisprflow-meeting-brief`) are read from `skills/<name>/SKILL.md` and registered with
   `ctx.skill.transform` at setup, because the contract's `register` does not register skills. A frontmatter name that is
-  not the folder, a missing description or an empty body fails setup with `OPTIONS_INVALID` and a next step.
+  not the folder, a missing description or an empty body fails setup with `SCHEMA_VIOLATION` and a next step.
 - Docs, skills and `AGENTS.md` generated from the manifest where the contract renders them; conformance fixtures for two
   accounts; Biome lint, a pack test and `plugin-kit check` in CI.
 

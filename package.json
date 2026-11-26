@@ -2,6 +2,12 @@
   "name": "@we-the-rebel-alliance/wisprflow-plugin",
   "version": "0.0.0",
   "description": "OpenCode plugin for Wispr Flow: Notetaker meetings, transcripts, summaries, Scratchpad notes and its calendar.",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "plugin-contract",
+    "wisprflow"
+  ],
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -23,7 +29,8 @@
     "skills",
     "assets",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "capabilities": {
     "version": 1,

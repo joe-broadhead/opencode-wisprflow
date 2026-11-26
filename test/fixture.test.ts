@@ -42,9 +42,28 @@ const recordedEvents = fixture.sources["wisprflow.meetings"]
 const recordedList = fixture.sources["wisprflow.meetings.list"]
 if (recordedEvents === undefined || recordedList === undefined) throw new Error("the fixture records no meetings sources")
 
+/** The fixture is redacted; name-based actor ids are placeholders and event hashes were recomputed. */
+function redactNameIDs(value: unknown): void {
+  if (Array.isArray(value)) {
+    for (const item of value) redactNameIDs(item)
+    return
+  }
+  if (value === null || typeof value !== "object") return
+  const object = value as Record<string, unknown>
+  if (Array.isArray(object["actors"])) {
+    for (const actor of object["actors"]) {
+      if (actor === null || typeof actor !== "object") continue
+      const entry = actor as Record<string, unknown>
+      if (typeof entry["id"] === "string" && entry["id"].startsWith("name:") && !entry["id"].includes("<redacted")) entry["id"] = "name:<redacted:personal>"
+    }
+  }
+  for (const item of Object.values(object)) redactNameIDs(item)
+}
+
 /** The fixture is redacted; its event hashes were recomputed after redaction. Do the same to the live page. */
 function redactedPage(answer: unknown): unknown {
   const redacted = redactValue(answer) as { events?: Record<string, unknown>[] } | undefined
+  redactNameIDs(redacted)
   for (const event of redacted?.events ?? []) event["hash"] = eventHash(event as never)
   return redacted
 }

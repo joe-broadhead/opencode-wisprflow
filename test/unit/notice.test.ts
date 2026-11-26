@@ -42,14 +42,10 @@ async function bundledPackages(): Promise<string[]> {
     const name = packageOf(path)
     if (keep(name)) found.add(name)
   }
-  // plugin-contract's dist inlines its own dependencies; the original module path survives in a comment.
-  for (const path of inputs) {
-    if (!path.startsWith("node_modules/")) continue
-    const text = readFileSync(join(root, path), "utf8")
-    for (const match of text.matchAll(/\/\/\s*node_modules\/((?:@[^/\s]+\/)?[^/\s]+)\//g)) {
-      if (keep(match[1])) found.add(match[1])
-    }
-  }
+  // plugin-contract's dist carries zod pre-bundled, so esbuild lists only the contract's dist paths. Detect zod by
+  // its code in the bundle, not by a metafile package name.
+  const bundle = result.outputFiles?.[0]?.text ?? ""
+  if (bundle.includes("$ZodType") || bundle.includes("ZodError")) found.add("zod")
   return [...found].sort()
 }
 
@@ -78,6 +74,7 @@ test("every bundled package has its verbatim licence in NOTICE", async () => {
   const names = await bundledPackages()
   assert.ok(names.includes("yaml"), "yaml is bundled")
   assert.ok(names.includes("@we-the-rebel-alliance/plugin-contract"), "plugin-contract is bundled")
+  assert.ok(names.includes("zod"), "zod is carried inside plugin-contract's dist")
   const packages = names.map(packageInfo)
   const notice = readFileSync(join(root, "NOTICE"), "utf8")
   assert.deepEqual(missingNoticeSections(notice, packages), [])
